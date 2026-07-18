@@ -1076,7 +1076,48 @@ function private.onIdentifySellerResult()
 			private.pendingIdentify.state = "waiting_to_query"
 		else
 			local itemName = private.pendingIdentify.name
-			aucPrint((itemName or "Item")..": seller not found on AH.")
+			aucPrint((itemName or "Item")..": seller not found on AH. Removing from list")
+			
+			local Const = AucAdvanced.Const
+			local imageResults = AucAdvanced.Scan.QueryImage({
+				link = private.pendingIdentify.link,
+				minStack = private.pendingIdentify.count,
+				maxStack = private.pendingIdentify.count,
+				minBuyout = private.pendingIdentify.buyout,
+				maxBuyout = private.pendingIdentify.buyout,
+			})
+			if imageResults then
+				for _, imageEntry in ipairs(imageResults) do
+					imageEntry[Const.FLAG] = bit.bor(imageEntry[Const.FLAG] or 0, Const.FLAG_UNSEEN)
+				end
+			end
+
+			local rowsToRemove = {}
+			for _, rowIndex in ipairs(private.pendingIdentify.rows) do
+				tinsert(rowsToRemove, rowIndex)
+			end
+			table.sort(rowsToRemove, function(a, b) return a > b end)
+			
+			for _, rowIndex in ipairs(rowsToRemove) do
+				tremove(private.sheetData, rowIndex)
+				local sheetTotal = #private.sheetData
+				for i = rowIndex, sheetTotal do
+					private.sheetStyle[i] = private.sheetStyle[i+1]
+				end
+				private.sheetStyle[sheetTotal+1] = nil
+
+				if gui.sheet.selected == rowIndex then
+					gui.sheet.selected = nil
+					empty(private.data)
+				elseif gui.sheet.selected and gui.sheet.selected > rowIndex then
+					gui.sheet.selected = gui.sheet.selected - 1
+				end
+			end
+			
+			gui.sheet:SetData(private.sheetData, private.sheetStyle)
+			gui.sheet:Render()
+			lib.UpdateControls()
+			
 			private.pendingIdentify = nil
 		end
 	end
