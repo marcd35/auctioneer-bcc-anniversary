@@ -1,0 +1,32 @@
+## Title: Informant Classic
+## Notes: Displays detailed item information in tooltips, such as use, vendor sales information, and more.
+##
+## Interface: 11508, 110205, 50502, 120000, 110207, 20505
+## Dependencies: Stubby
+## OptionalDeps: !nLog, Babylonian, DebugLib, Configator, SlideBar, LibExtraTip_, TipHelper, LibDataBroker
+## SavedVariables: InformantConfig, InformantLocalUpdates
+## IconTexture: Interface/Addons/Informant/inficon.blp
+##
+## Version: 1.0.1
+## Author: saluzafa, Norganna, unfunf22,
+## Revision: $Id$
+## X-Category: Item Data
+
+
+InfManifest.lua
+
+..\Auc-Advanced\Libs\Load.xml
+
+InfStrings.lua
+InfLocale.lua
+InfMain.lua
+
+Data\InfQuests.lua
+Data\InfVendors.lua
+Data\InfData.lua
+
+InfSettings.lua
+InfCommand.lua
+InfTooltip.lua
+
+Informant.xml

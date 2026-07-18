@@ -1,0 +1,14 @@
+## Title: Auc:Util:Scan Start
+## Interface: 20503
+## Dependancies: Auc-Advanced
+##
+## Version: 2.5.6758 (SwimmingSeadragon)
+## Revision: $Id: Auc-Util-ScanStart.toc 6758 2022-01-25 11:42:44Z none $
+## Author: Norganna's AddOns
+## X-Part-Of: Auctioneer
+## X-Category: Auction House
+## X-Max-Interface: 80100
+## X-URL: http://auctioneeraddon.com/
+## X-Feedback: http://forums.norganna.org
+##
+Embed.xml
