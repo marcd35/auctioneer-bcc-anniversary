@@ -8,6 +8,7 @@ This fork specifically addresses bugs introduced with the World of Warcraft Burn
 
 ### Fixed Bugs
 
+- **Posting Multiple Stacks Error**: Fixed an infinite loop error (`attempt to perform arithmetic on global 'CASTING_BAR_ALPHA_STEP'`) when posting multiple stacks of an item. This was caused by a missing global variable in the Burning Crusade Classic (BCC) Auction UI, which has now been properly injected.
 - **Ignore List Filtering**: Fixed issues where the seller ignore list failed to hide auctions from ignored players. In patch 2.5.6, seller name (GUID-to-name) resolution became asynchronous, meaning the first time an auction is scanned, the seller name is often empty. Because the ignore filter previously only ran during the initial creation of an auction in the scan data, ignored sellers were slipping through unfiltered. The filter now correctly re-evaluates auctions when the seller name is resolved on subsequent scans. Additionally, SearchUI was updated to actively check the ignore list during search queries, ensuring previously cached auctions from newly-ignored sellers are not displayed. For a detailed technical breakdown, please see the [Ignore List Bug Analysis](docs/Ignore_List_Bug_Analysis.md) document.
 
 ### New Features
