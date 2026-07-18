@@ -1,6 +1,6 @@
 --[[
 	Auctioneer - Appraisals and Auction Posting
-	Version: 2.5.6743 (SwimmingSeadragon)
+	Version: 2.6.8 (marcd35)
 	Revision: $Id: AprFrame.lua 6743 2022-01-25 11:42:44Z none $
 	URL: http://auctioneeraddon.com/
 
@@ -198,7 +198,7 @@ function private.CreateFrames()
 			if selected then
 				if selected[7] == frame.selectedRawLink then -- we had a raw link and it matches last selected item
 					item = selected -- note that this item is not included in ItemList
-					item[6] = GetItemCount(sig, false) -- re-count available items
+					item[6] = GetItemCount(item[7] or sig, false) -- re-count available items
 					sig = item[1]
 					-- pos remains nil
 				elseif get("util.appraiser.reselect") then
@@ -291,7 +291,7 @@ function private.CreateFrames()
 				if not name and rarity then
 					return
 				end
-				local myCount = GetItemCount(sig, false)
+				local myCount = GetItemCount(rawlink or sig, false)
 				item = {
 					sig, name, texture, rarity, stack, myCount, rawlink,
 					raw = true,
@@ -1574,7 +1574,19 @@ function private.CreateFrames()
 
 	function frame.PostBySig(sig, dryRun, singleclick)
 		local link, itemName = AucAdvanced.Modules.Util.Appraiser.GetLinkFromSig(sig)
-		local total, unpostable = GetItemCount(sig, false), 0;
+		local total, unpostable = 0, 0
+		if frame.list then
+			for i = 1, #frame.list do
+				if frame.list[i][1] == sig then
+					total = frame.list[i][6]
+					break
+				end
+			end
+		end
+		if total == 0 then
+			total = GetItemCount(link or sig, false)
+		end
+		
 		if not (link and total) then
 			UIErrorsFrame:AddMessage(_TRANS('APPR_Interface_UnablePostAuctions') )--Unable to post auctions at this time
 			aucPrint(_TRANS('APPR_Help_CannotPostAuctions'), "Invalid item sig")--Cannot post auctions:

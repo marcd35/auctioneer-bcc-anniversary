@@ -1909,7 +1909,7 @@ function private.MakeGuiConfig()
 
 	gui.frame.cancel = CreateFrame("Button", "AucAdvSearchUICancelButton", gui.frame, "UIPanelButtonTemplate")
 	gui.frame.cancel:SetPoint("BOTTOMLEFT", gui, "BOTTOMLEFT", 30, 30)
-	gui.frame.cancel:SetWidth(22)
+	gui.frame.cancel:SetWidth(80)
 	gui.frame.cancel:SetHeight(18)
 	gui.frame.cancel:Disable()
 	gui.frame.cancel:SetScript("OnClick", function()
