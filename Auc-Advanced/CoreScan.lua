@@ -1,4 +1,4 @@
---[[
+ --[[
 	Auctioneer
 	Version: 2.5.6733 (SwimmingSeadragon)
 	Revision: $Id: CoreScan.lua 6733 2022-01-25 11:42:44Z none $
@@ -1421,6 +1421,7 @@ local Commitfunction = function()
 				if bitand(data[Const.FLAG], Const.FLAG_FILTER) ~= 0 then
 					filterOldCount = filterOldCount + 1
 				else
+					local newlyFiltered = false
 					-- Post-2.5.6 fix: seller names are often nil/empty on first scan due to deferred GUID resolution.
 					-- If the seller name was previously unknown ("") but is now resolved, re-run the filter
 					-- so that ignored sellers caught on subsequent scans are properly marked.
@@ -1430,27 +1431,28 @@ local Commitfunction = function()
 							data[Const.FLAG] = bitor(data[Const.FLAG] or 0, Const.FLAG_FILTER)
 							filterOldCount = filterOldCount + 1
 							workingImage[itemPos] = data
-							goto continueStage3
+							newlyFiltered = true
 						end
 					end
-					if not private.IsIdentical(oldItem, data) then
-						if processStats(processors, "update", data, oldItem) then
-							updateCount = updateCount + 1
-						end
-						if bitand(oldItem[Const.FLAG], Const.FLAG_UNSEEN) ~= 0 then
-							updateRecoveredCount = updateRecoveredCount + 1
-						end
-					else
-						if processStats(processors, "leave", data) then
-							sameCount = sameCount + 1
-						end
-						if bitand(oldItem[Const.FLAG], Const.FLAG_UNSEEN) ~= 0 then
-							sameRecoveredCount = sameRecoveredCount + 1
+					if not newlyFiltered then
+						if not private.IsIdentical(oldItem, data) then
+							if processStats(processors, "update", data, oldItem) then
+								updateCount = updateCount + 1
+							end
+							if bitand(oldItem[Const.FLAG], Const.FLAG_UNSEEN) ~= 0 then
+								updateRecoveredCount = updateRecoveredCount + 1
+							end
+						else
+							if processStats(processors, "leave", data) then
+								sameCount = sameCount + 1
+							end
+							if bitand(oldItem[Const.FLAG], Const.FLAG_UNSEEN) ~= 0 then
+								sameRecoveredCount = sameRecoveredCount + 1
+							end
 						end
 					end
 				end
 				workingImage[itemPos] = data
-				::continueStage3::
 			else
 				if (processStats(processors, messageCreate, data)) then
 					newCount = newCount + 1

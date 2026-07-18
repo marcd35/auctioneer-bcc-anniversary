@@ -128,3 +128,31 @@ end
 |------|--------|
 | [BasicFilter.lua](file:///c:/Coding/auctioneer/AuctioneerSuite-Crusade-2.6.7/Auc-Filter-Basic/BasicFilter.lua) | Extend `AuctionFilter` to handle `"update"`/`"leave"` ops |
 | [CoreScan.lua](file:///c:/Coding/auctioneer/AuctioneerSuite-Crusade-2.6.7/Auc-Advanced/CoreScan.lua) | Add re-filter logic when seller name resolves from `""` |
+
+---
+
+## Bug #3 — The SearchUI Defect
+
+Even with the scan data correctly filtering out ignored sellers, the `SearchUI` module (`SearchMain.lua`) still showed ignored sellers in its search results. 
+
+### Why this happened
+When a user clicks "Search" in SearchUI, the addon queries the snapshot via `lib.SearchItem`. This function explicitly checks if the item belongs to the current player (`item[Const.SELLER] == UnitName("player")`), and it runs the item through SearchUI's local filters (ItemPrice, ItemQuality, etc.). However, **it lacked a check against the global BasicFilter ignore list**. So if a scan happened to store an ignored seller's auction before it was filtered (or if the user added the seller to the ignore list *after* the scan completed), SearchUI would display the item.
+
+### The Fix
+The fix adds a seller ignore check at the top of `lib.SearchItem` in `SearchMain.lua`, directly mirroring the pattern used in `Appraiser` and `CompactUI`.
+
+```lua
+if AucAdvanced.Modules.Filter and AucAdvanced.Modules.Filter.Basic and AucAdvanced.Modules.Filter.Basic.IsPlayerIgnored then
+    if AucAdvanced.Modules.Filter.Basic.IsPlayerIgnored(item[Const.SELLER]) then
+        return false, "Blocked: Seller is on ignore list"
+    end
+end
+```
+
+## Updated Files to Modify
+
+| File | Change |
+|------|--------|
+| [BasicFilter.lua](file:///c:/Coding/auctioneer/AuctioneerSuite-Crusade-2.6.7/Auc-Filter-Basic/BasicFilter.lua) | Extend `AuctionFilter` to handle `"update"`/`"leave"` ops |
+| [CoreScan.lua](file:///c:/Coding/auctioneer/AuctioneerSuite-Crusade-2.6.7/Auc-Advanced/CoreScan.lua) | Add re-filter logic when seller name resolves from `""` |
+| [SearchMain.lua](file:///c:/Coding/auctioneer/AuctioneerSuite-Crusade-2.6.7/Auc-Advanced/Modules/Auc-Util-SearchUI/SearchMain.lua) | Add seller ignore check in `lib.SearchItem` to prevent ignored sellers from appearing in SearchUI results |

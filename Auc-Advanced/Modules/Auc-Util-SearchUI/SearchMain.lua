@@ -1,6 +1,6 @@
 --[[
 	Auctioneer - Search UI
-	Version: 2.5.6750 (SwimmingSeadragon)
+	Version: 2.6.8 (marcd35)
 	Revision: $Id: SearchMain.lua 6750 2022-01-25 11:42:44Z none $
 	URL: http://auctioneeraddon.com/
 
@@ -873,6 +873,17 @@ function private.ignoretemp()
 	private.removeline()
 end
 
+function private.ignoreseller()
+	local seller = private.data.seller
+	if seller and seller ~= "" then
+		if AucAdvanced.Modules.Filter and AucAdvanced.Modules.Filter.Basic and AucAdvanced.Modules.Filter.Basic.AddPlayerIgnore then
+			AucAdvanced.Modules.Filter.Basic.AddPlayerIgnore(seller)
+			aucPrint("SearchUI now ignoring seller "..seller)
+			private.removeline()
+		end
+	end
+end
+
 function private.snatch()
 	local link = private.data.link
 	local price
@@ -1297,11 +1308,13 @@ function private.MakeGuiConfig()
 			gui.frame.ignoreperm:Enable()
 			gui.frame.notnow:Enable()
 			gui.frame.snatch:Enable()
+			gui.frame.ignoreseller:Enable()
 		else
 			gui.frame.ignore:Disable()
 			gui.frame.ignoreperm:Disable()
 			gui.frame.notnow:Disable()
 			gui.frame.snatch:Disable()
+			gui.frame.ignoreseller:Disable()
 		end
 		if selected ~= gui.sheet.selected then
 			selected = gui.sheet.selected
@@ -1646,6 +1659,16 @@ function private.MakeGuiConfig()
 	gui.frame.snatch:SetScript("OnEnter", showTooltipText)
 	gui.frame.snatch:SetScript("OnLeave", hideTooltip)
 
+	gui.frame.ignoreseller = CreateFrame("Button", nil, gui.frame, "UIPanelButtonTemplate")
+	gui.frame.ignoreseller:SetPoint("TOP", gui.frame.snatch, "BOTTOM", 0, -2)
+	gui.frame.ignoreseller:SetText("Ignore Seller")
+	gui.frame.ignoreseller:SetWidth(100)
+	gui.frame.ignoreseller:SetScript("OnClick", private.ignoreseller)
+	gui.frame.ignoreseller:Disable()
+	gui.frame.ignoreseller.TooltipText = "add seller to ignore list"
+	gui.frame.ignoreseller:SetScript("OnEnter", showTooltipText)
+	gui.frame.ignoreseller:SetScript("OnLeave", hideTooltip)
+
 	gui.frame.clear = CreateFrame("Button", nil, gui.frame, "UIPanelButtonTemplate")
 	gui.frame.clear:SetPoint("TOP", gui.Search, "BOTTOM", 0, -5)
 	gui.frame.clear:SetText("Clear")
@@ -1961,6 +1984,11 @@ function lib.SearchItem(searcherName, item, nodupes, skipresults)
 	end
 	if item[Const.SELLER] == UnitName("player") then
 		return false, "Blocked: Can't buy own auction"
+	end
+	if AucAdvanced.Modules.Filter and AucAdvanced.Modules.Filter.Basic and AucAdvanced.Modules.Filter.Basic.IsPlayerIgnored then
+		if AucAdvanced.Modules.Filter.Basic.IsPlayerIgnored(item[Const.SELLER]) then
+			return false, "Blocked: Seller is on ignore list"
+		end
 	end
 	local searcher = lib.Searchers[searcherName]
 	if not searcher then
