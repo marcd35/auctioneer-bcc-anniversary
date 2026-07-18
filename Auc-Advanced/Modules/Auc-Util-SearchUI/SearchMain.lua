@@ -2529,6 +2529,11 @@ local function OnUpdate(self, elapsed)
 			flagRescan = nil
 			CooldownFrame_Set(private.gui.Rescan.frame, 0, 0, false)
 			private.gui.Search:Enable()
+			-- Discard any stale/suspended search coroutine so that PerformSearch
+			-- always creates a fresh one using the newly-collected scan image.
+			-- Without this, lib.PerformSearch() silently skips if coSearch is
+			-- still suspended from a previous search, leaving old results on screen.
+			coSearch = nil
 			lib.PerformSearch()
 		else
 			--if scan still in progress, keep the button churnin'
