@@ -884,6 +884,205 @@ function private.ignoreseller()
 	end
 end
 
+function private.identifyseller()
+	if not (AuctionFrame and AuctionFrame:IsShown()) then
+		aucPrint("Please open the Auction House to identify the seller.")
+		return
+	end
+
+	local seller = private.data.seller
+	local link = private.data.link
+	local buyout = private.data.buyout or 0
+	local stack = private.data.stack or 1
+	
+	if seller and seller ~= "" then
+		aucPrint("Seller is already identified: "..seller)
+		return
+	end
+	
+	if not link then
+		aucPrint("No auction selected to identify.")
+		return
+	end
+
+	local itemName = link:match("|h%[(.-)%]|h") or GetItemInfo(link)
+	if not itemName then
+		aucPrint("Could not determine item name to identify.")
+		return
+	end
+
+	if private.identifyQueueMode then
+		aucPrint("Bulk identification in progress. Stop it first.")
+		return
+	end
+
+	private.pendingIdentify = {
+		name = itemName,
+		link = AucAdvanced.SanitizeLink(link),
+		buyout = buyout,
+		count = stack,
+		rows = { gui.sheet.selected },
+		page = 0,
+		state = "waiting_to_query"
+	}
+	
+	aucPrint("Querying AH for seller of "..itemName.."...")
+end
+
+function private.identifyall()
+	if private.identifyQueueMode then
+		private.identifyQueueMode = false
+		private.identifyQueue = nil
+		private.pendingIdentify = nil
+		if private.identifyFrame then
+			private.identifyFrame:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
+		end
+		gui.frame.identifyall:SetText("? All")
+		aucPrint("Bulk identification stopped.")
+		return
+	end
+
+	if not (AuctionFrame and AuctionFrame:IsShown()) then
+		aucPrint("Please open the Auction House to identify sellers.")
+		return
+	end
+	
+	if not private.sheetData or #private.sheetData == 0 then
+		aucPrint("No search results to identify.")
+		return
+	end
+	
+	private.identifyQueue = {}
+	local itemsAdded = {}
+	
+	for rowIndex, row in ipairs(private.sheetData) do
+		local link = row[1]
+		local seller = row[8]
+		local count = row[4] or 1
+		local buyout = row[5] or 0
+		
+		if (not seller or seller == "") and link then
+			local itemName = link:match("|h%[(.-)%]|h") or GetItemInfo(link)
+			if itemName then
+				-- We identify uniquely by name, link, buyout, count
+				local uid = itemName.."|"..link.."|"..buyout.."|"..count
+				if not itemsAdded[uid] then
+					itemsAdded[uid] = {
+						name = itemName,
+						link = AucAdvanced.SanitizeLink(link),
+						buyout = buyout,
+						count = count,
+						rows = { rowIndex }
+					}
+					tinsert(private.identifyQueue, itemsAdded[uid])
+				else
+					tinsert(itemsAdded[uid].rows, rowIndex)
+				end
+			end
+		end
+	end
+	
+	if #private.identifyQueue == 0 then
+		aucPrint("All sellers are already identified.")
+		return
+	end
+	
+	private.identifyQueueMode = true
+	gui.frame.identifyall:SetText("Stop ?")
+	aucPrint("Starting bulk identification for "..#private.identifyQueue.." unique auctions...")
+end
+
+function private.processIdentifyQueue()
+	if not private.identifyQueueMode then return end
+	
+	if not private.identifyQueue or #private.identifyQueue == 0 then
+		private.identifyQueueMode = false
+		gui.frame.identifyall:SetText("? All")
+		aucPrint("Done identifying sellers.")
+		return
+	end
+	
+	local nextIdentify = tremove(private.identifyQueue, 1)
+	private.pendingIdentify = {
+		name = nextIdentify.name,
+		link = nextIdentify.link,
+		buyout = nextIdentify.buyout,
+		count = nextIdentify.count,
+		rows = nextIdentify.rows,
+		page = 0,
+		state = "waiting_to_query"
+	}
+end
+
+function private.onIdentifySellerResult()
+	if private.identifyFrame then
+		private.identifyFrame:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
+	end
+	
+	if not private.pendingIdentify or private.pendingIdentify.state ~= "waiting_for_event" then return end
+	
+	local foundOwner = nil
+	local batch, total = GetNumAuctionItems("list")
+	for i = 1, batch do
+		local link = GetAuctionItemLink("list", i)
+		if link then
+			link = AucAdvanced.SanitizeLink(link)
+			local name, texture, count, quality, canUse, level, levelColHeader, minBid, minIncrement, buyoutPrice, bidAmount, highBidder, bidderFullName, owner = GetAuctionItemInfo("list", i)
+			
+			if link == private.pendingIdentify.link and count == private.pendingIdentify.count and buyoutPrice == private.pendingIdentify.buyout then
+				if owner and owner ~= "" then
+					foundOwner = owner
+					break
+				end
+			end
+		end
+	end
+	
+	if foundOwner then
+		local itemName = private.pendingIdentify.name
+		aucPrint((itemName or "Item")..": seller is "..foundOwner)
+
+		-- Persist seller name into the live scan image so it survives re-searches
+		local Const = AucAdvanced.Const
+		local imageResults = AucAdvanced.Scan.QueryImage({
+			link = private.pendingIdentify.link,
+			minStack = private.pendingIdentify.count,
+			maxStack = private.pendingIdentify.count,
+			minBuyout = private.pendingIdentify.buyout,
+			maxBuyout = private.pendingIdentify.buyout,
+		})
+		if imageResults then
+			for _, imageEntry in ipairs(imageResults) do
+				if not imageEntry[Const.SELLER] or imageEntry[Const.SELLER] == "" then
+					imageEntry[Const.SELLER] = foundOwner
+				end
+			end
+		end
+
+		for _, rowIndex in ipairs(private.pendingIdentify.rows) do
+			if private.sheetData[rowIndex] then
+				private.sheetData[rowIndex][8] = foundOwner
+			end
+			if gui.sheet.selected == rowIndex then
+				private.data.seller = foundOwner
+			end
+		end
+		gui.sheet:SetData(private.sheetData, private.sheetStyle)
+		gui.sheet:Render()
+		private.pendingIdentify = nil
+	else
+		if total > (private.pendingIdentify.page + 1) * 50 then
+			private.pendingIdentify.page = private.pendingIdentify.page + 1
+			private.pendingIdentify.state = "waiting_to_query"
+		else
+			local itemName = private.pendingIdentify.name
+			aucPrint((itemName or "Item")..": seller not found on AH.")
+			private.pendingIdentify = nil
+		end
+	end
+end
+
+
 function private.snatch()
 	local link = private.data.link
 	local price
@@ -1309,13 +1508,22 @@ function private.MakeGuiConfig()
 			gui.frame.notnow:Enable()
 			gui.frame.snatch:Enable()
 			gui.frame.ignoreseller:Enable()
+			gui.frame.identifyseller:Enable()
 		else
 			gui.frame.ignore:Disable()
 			gui.frame.ignoreperm:Disable()
 			gui.frame.notnow:Disable()
 			gui.frame.snatch:Disable()
 			gui.frame.ignoreseller:Disable()
+			gui.frame.identifyseller:Disable()
 		end
+
+		if private.sheetData and #private.sheetData > 0 then
+			if gui.frame.identifyall then gui.frame.identifyall:Enable() end
+		else
+			if gui.frame.identifyall then gui.frame.identifyall:Disable() end
+		end
+
 		if selected ~= gui.sheet.selected then
 			selected = gui.sheet.selected
 			local data = gui.sheet:GetSelection()
@@ -1668,6 +1876,26 @@ function private.MakeGuiConfig()
 	gui.frame.ignoreseller.TooltipText = "add seller to ignore list"
 	gui.frame.ignoreseller:SetScript("OnEnter", showTooltipText)
 	gui.frame.ignoreseller:SetScript("OnLeave", hideTooltip)
+
+	gui.frame.identifyseller = CreateFrame("Button", nil, gui.frame, "UIPanelButtonTemplate")
+	gui.frame.identifyseller:SetPoint("LEFT", gui.frame.snatch, "RIGHT", 4, 0)
+	gui.frame.identifyseller:SetText("? Row")
+	gui.frame.identifyseller:SetWidth(60)
+	gui.frame.identifyseller:SetScript("OnClick", private.identifyseller)
+	gui.frame.identifyseller:Disable()
+	gui.frame.identifyseller.TooltipText = "Attempts to query the server to identify the seller"
+	gui.frame.identifyseller:SetScript("OnEnter", showTooltipText)
+	gui.frame.identifyseller:SetScript("OnLeave", hideTooltip)
+
+	gui.frame.identifyall = CreateFrame("Button", nil, gui.frame, "UIPanelButtonTemplate")
+	gui.frame.identifyall:SetPoint("LEFT", gui.frame.ignoreseller, "RIGHT", 4, 0)
+	gui.frame.identifyall:SetText("? All")
+	gui.frame.identifyall:SetWidth(60)
+	gui.frame.identifyall:SetScript("OnClick", private.identifyall)
+	gui.frame.identifyall:Disable()
+	gui.frame.identifyall.TooltipText = "Attempts to query the server to identify sellers for all search results"
+	gui.frame.identifyall:SetScript("OnEnter", showTooltipText)
+	gui.frame.identifyall:SetScript("OnLeave", hideTooltip)
 
 	gui.frame.clear = CreateFrame("Button", nil, gui.frame, "UIPanelButtonTemplate")
 	gui.frame.clear:SetPoint("TOP", gui.Search, "BOTTOM", 0, -5)
@@ -2263,6 +2491,23 @@ function lib.PerformSearch(searcher)
 end
 
 local function OnUpdate(self, elapsed)
+	if private.pendingIdentify then
+		if private.pendingIdentify.state == "waiting_to_query" then
+			if CanSendAuctionQuery() then
+				private.pendingIdentify.state = "waiting_for_event"
+				if not private.identifyFrame then
+					private.identifyFrame = CreateFrame("Frame")
+					private.identifyFrame:SetScript("OnEvent", private.onIdentifySellerResult)
+				end
+				private.identifyFrame:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
+				AucAdvanced.Scan.SetAuctioneerQuery()
+				QueryAuctionItems(private.pendingIdentify.name, nil, nil, private.pendingIdentify.page, nil, nil, nil, true)
+			end
+		end
+	elseif private.identifyQueueMode then
+		private.processIdentifyQueue()
+	end
+
 	if coSearch then
 		if coroutine.status(coSearch) == "suspended" then
 			local status, result = coroutine.resume(coSearch)
