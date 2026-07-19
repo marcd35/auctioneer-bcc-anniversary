@@ -1078,6 +1078,10 @@ function private.onIdentifySellerResult()
 			local itemName = private.pendingIdentify.name
 			aucPrint((itemName or "Item")..": seller not found on AH. Removing from list")
 			
+			-- Permanently remove this auction from the live scan database so it
+			-- will not reappear in future searches. QueryImage returns live
+			-- references into scandata.image, so DeleteImageEntries can splice
+			-- them out directly.
 			local Const = AucAdvanced.Const
 			local imageResults = AucAdvanced.Scan.QueryImage({
 				link = private.pendingIdentify.link,
@@ -1086,9 +1090,10 @@ function private.onIdentifySellerResult()
 				minBuyout = private.pendingIdentify.buyout,
 				maxBuyout = private.pendingIdentify.buyout,
 			})
-			if imageResults then
-				for _, imageEntry in ipairs(imageResults) do
-					imageEntry[Const.FLAG] = bit.bor(imageEntry[Const.FLAG] or 0, Const.FLAG_UNSEEN)
+			if imageResults and #imageResults > 0 then
+				local removed = AucAdvanced.Scan.DeleteImageEntries(imageResults)
+				if removed > 0 then
+					aucPrint((itemName or "Item")..": purged "..removed.." stale entr"..(removed == 1 and "y" or "ies").." from database.")
 				end
 			end
 
@@ -2541,7 +2546,6 @@ local function OnUpdate(self, elapsed)
 					private.identifyFrame:SetScript("OnEvent", private.onIdentifySellerResult)
 				end
 				private.identifyFrame:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
-				AucAdvanced.Scan.SetAuctioneerQuery()
 				QueryAuctionItems(private.pendingIdentify.name, nil, nil, private.pendingIdentify.page, nil, nil, nil, true)
 			end
 		end

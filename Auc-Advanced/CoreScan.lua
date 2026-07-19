@@ -1,6 +1,6 @@
  --[[
 	Auctioneer
-	Version: 2.5.6733 (SwimmingSeadragon)
+	Version: 2.6.8 (marcd35)
 	Revision: $Id: CoreScan.lua 6733 2022-01-25 11:42:44Z none $
 	URL: http://auctioneeraddon.com/
 
@@ -943,6 +943,44 @@ function lib.QueryImage(query, serverKey, reserved, ...)
 	end
 
 	return queryResults
+end
+
+-- lib.DeleteImageEntries(entries, serverKey)
+-- Permanently removes the given live entry references from scandata.image.
+-- 'entries' must be a table of live references previously returned by QueryImage.
+-- This is an irreversible operation; entries will not reappear on the next search.
+-- Also clears the SubImageCache and QueryImage cache so subsequent queries reflect the deletion.
+-- Returns the number of entries actually removed.
+function lib.DeleteImageEntries(entries, serverKey)
+	if not entries or #entries == 0 then return 0 end
+	serverKey = serverKey or Resources.ServerKey
+	local scandata = private.GetScanData(serverKey)
+	if not scandata then return 0 end
+	local image = scandata.image
+
+	-- Build a set of references to delete for O(1) lookup
+	local toDelete = {}
+	for _, entry in ipairs(entries) do
+		toDelete[entry] = true
+	end
+
+	-- Walk image backwards so tremove indices stay valid
+	local removed = 0
+	for i = #image, 1, -1 do
+		if toDelete[image[i]] then
+			tremove(image, i)
+			removed = removed + 1
+		end
+	end
+
+	-- Clear caches so QueryImage and SubImageCache reflect the deletions
+	if removed > 0 then
+		wipe(private.scandataIndex)
+		private.prevQueryServerKey = nil
+		private.queryResults = nil
+	end
+
+	return removed
 end
 
 
