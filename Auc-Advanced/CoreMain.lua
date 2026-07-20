@@ -36,6 +36,9 @@
 --[[
 	See CoreAPI.lua for a description of the modules API
 ]]
+-- BCC fix: Ensure this global is defined before Blizzard_AuctionUI loads to prevent nil arithmetic errors in AuctionProgressFrame_OnUpdate
+CASTING_BAR_ALPHA_STEP = CASTING_BAR_ALPHA_STEP or 0.05
+
 local AucAdvanced = AucAdvanced
 if not AucAdvanced then return end
 AucAdvanced.CoreFileCheckIn("CoreMain")
@@ -261,12 +264,6 @@ end
 local function HookAH()
 	Stubby.UnregisterAddOnHook("Blizzard_AuctionUI", "Auc-Advanced")
 	hooksecurefunc("AuctionFrameBrowse_Update", AucAdvanced.API.ListUpdate)
-	
-	-- Fix for BCC Blizzard_AuctionUI bug missing CASTING_BAR_ALPHA_STEP
-	if CASTING_BAR_ALPHA_STEP == nil then
-		CASTING_BAR_ALPHA_STEP = 0.05
-	end
-	
 	AucAdvanced.SendProcessorMessage("auctionui")
 end
 

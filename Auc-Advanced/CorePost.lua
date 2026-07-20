@@ -1,6 +1,6 @@
 --[[
 	Auctioneer
-	Version: 2.5.6733 (SwimmingSeadragon)
+	Version: 2.6.8 (marcd35)
 	Revision: $Id: CorePost.lua 6733 2022-01-25 11:42:44Z none $
 	URL: http://auctioneeraddon.com/
 
