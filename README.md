@@ -8,6 +8,9 @@ This fork specifically addresses bugs introduced with the World of Warcraft Burn
 
 ### Fixed Bugs
 
+- **Cancel Button** - Fixed cancel button in SearchUI below "Clear" button
+- **Cancel Button Queue Status Text** - Fixed a UI layout issue where the queued quantity and cost text was incorrectly placed outside of the "Cancel" button, it now appropriately replaces the "Cancel" text.
+- **SearchUI Stale Data** - Fixed a bug where clicking the "Rescan" button would return stale auctions (auctions that were no longer on the AH). The UI now properly filters out auctions flagged as unseen by the scan engine.
 - **Single Item Posting** - Fixed bug where posting a BoE item with a base + suffix would sometimes return an error "you do not have enough items to do that"
 - **Stale Queries** - Attempting to perform a refresh query via SearchUI now properly discards any stale/suspended search results.
 - **Posting Multiple Stacks Error**: Fixed an infinite loop error (`attempt to perform arithmetic on global 'CASTING_BAR_ALPHA_STEP'`) when posting multiple stacks of an item. This was caused by a missing global variable in the Burning Crusade Classic (BCC) Auction UI, which has now been properly injected. For a detailed technical breakdown, please see the [Multisell Bug Analysis](docs/Multisell_Bug_Analysis.md) document.

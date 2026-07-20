@@ -1363,8 +1363,8 @@ function private.CreateAuctionFrames()
 
 	frame.money = frame:CreateTexture(nil, "ARTWORK")
 	frame.money:SetTexture("Interface\\AddOns\\Auc-Advanced\\Textures\\GoldMoney")
-	frame.money:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, 34)
-	frame.money:SetWidth(256)
+	frame.money:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 20, 34)
+	frame.money:SetWidth(240)
 	frame.money:SetHeight(32)
 
 	frame.backing = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
@@ -1954,8 +1954,9 @@ function private.MakeGuiConfig()
 	gui.frame.clear:SetScript("OnLeave", hideTooltip)
 
 	gui.frame.cancel = CreateFrame("Button", "AucAdvSearchUICancelButton", gui.frame, "UIPanelButtonTemplate")
-	gui.frame.cancel:SetPoint("BOTTOMLEFT", gui, "BOTTOMLEFT", 30, 30)
-	gui.frame.cancel:SetWidth(80)
+	gui.frame.cancel:SetPoint("BOTTOMLEFT", gui, "BOTTOMLEFT", 15, 30)
+	gui.frame.cancel:SetText("Cancel")
+	gui.frame.cancel:SetWidth(140)
 	gui.frame.cancel:SetHeight(18)
 	gui.frame.cancel:Disable()
 	gui.frame.cancel:SetScript("OnClick", function()
@@ -1970,28 +1971,16 @@ function private.MakeGuiConfig()
 			queuecost = queuecost + promptcost
 		end
 		if queuelen > 0 then
-			gui.frame.cancel.label:SetText(tostring(queuelen)..": "..AucAdvanced.Coins(queuecost, true))
+			gui.frame.cancel:SetText(tostring(queuelen)..": "..AucAdvanced.Coins(queuecost, true))
 			gui.frame.cancel.value = queuecost
 			gui.frame.cancel:Enable()
-			gui.frame.cancel.tex:SetVertexColor(1.0, 0.9, 0.1)
 		else
-			gui.frame.cancel.label:SetText("")
+			gui.frame.cancel:SetText("Cancel")
 			gui.frame.cancel.value = 0
 			gui.frame.cancel:Disable()
-			gui.frame.cancel.tex:SetVertexColor(0.3, 0.3, 0.3)
 		end
 	end
-	gui.frame.cancel.tex = gui.frame.cancel:CreateTexture(nil, "OVERLAY")
-	gui.frame.cancel.tex:SetPoint("TOPLEFT", gui.frame.cancel, "TOPLEFT", 4, -2)
-	gui.frame.cancel.tex:SetPoint("BOTTOMRIGHT", gui.frame.cancel, "BOTTOMRIGHT", -4, 2)
-	gui.frame.cancel.tex:SetTexture("Interface\\Addons\\Auc-Advanced\\Textures\\NavButtons")
-	gui.frame.cancel.tex:SetTexCoord(0.25, 0.5, 0, 1)
-	gui.frame.cancel.tex:SetVertexColor(0.3, 0.3, 0.3)
-	gui.frame.cancel.label = gui.frame.cancel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	gui.frame.cancel.label:SetPoint("LEFT", gui.frame.cancel, "RIGHT", 5, 0)
-	gui.frame.cancel.label:SetTextColor(1, 0.8, 0)
-	gui.frame.cancel.label:SetText("")
-	gui.frame.cancel.label:SetJustifyH("LEFT")
+
 
 	gui.frame.buyout = CreateFrame("Button", nil, gui.frame, "UIPanelButtonTemplate")
 	gui.frame.buyout:SetPoint("LEFT", gui.frame.notnow, "RIGHT", 5, 0)
@@ -2258,6 +2247,9 @@ function lib.SearchItem(searcherName, item, nodupes, skipresults)
 	end
 	if item[Const.SELLER] == UnitName("player") then
 		return false, "Blocked: Can't buy own auction"
+	end
+	if bit.band(item[Const.FLAG] or 0, Const.FLAG_UNSEEN) ~= 0 then
+		return false, "Blocked: Auction is stale (unseen)"
 	end
 	if AucAdvanced.Modules.Filter and AucAdvanced.Modules.Filter.Basic and AucAdvanced.Modules.Filter.Basic.IsPlayerIgnored then
 		if AucAdvanced.Modules.Filter.Basic.IsPlayerIgnored(item[Const.SELLER]) then
