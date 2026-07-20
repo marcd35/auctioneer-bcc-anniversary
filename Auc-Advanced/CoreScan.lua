@@ -962,6 +962,7 @@ function lib.DeleteImageEntries(entries, serverKey)
 	local toDelete = {}
 	for _, entry in ipairs(entries) do
 		toDelete[entry] = true
+		entry.deleted = true
 	end
 
 	-- Walk image backwards so tremove indices stay valid
@@ -1049,7 +1050,13 @@ local Commitfunction = function()
 		lib.ProgressBars("CommitProgressBar", 0, true)
 	end
 	local hadGetError = false
-	local oldCount = #scandata.image
+	local scandataSnapshot = {}
+	for i = 1, #scandata.image do
+		if scandata.image[i] then
+			tinsert(scandataSnapshot, scandata.image[i])
+		end
+	end
+	local oldCount = #scandataSnapshot
 	local scanCount = #TempcurScan
 
 	if wasGetAll and scanCount < 100 then
@@ -1321,7 +1328,7 @@ local Commitfunction = function()
 		local AucMaxTimes = Const.AucMaxTimes
 
 		nextPause = debugprofilestop() + processingTime
-		for _, data in ipairs(scandata.image) do
+		for _, data in ipairs(scandataSnapshot) do
 			if debugprofilestop() > nextPause then
 				lib.ProgressBars("CommitProgressBar", 100*progresscounter/progresstotal, true, "Auctioneer: Processing Stage 2")
 				coroutine.yield()
@@ -1602,13 +1609,22 @@ local Commitfunction = function()
 		coroutine.yield()
 	end
 
+	local userDeleteCount = 0
+	for i = #workingImage, 1, -1 do
+		if workingImage[i].deleted then
+			workingImage[i].deleted = nil
+			tremove(workingImage, i)
+			userDeleteCount = userDeleteCount + 1
+		end
+	end
+
 	-- Store workingImage into the scandata record (replacing the old image)
 	scandata.image = workingImage
 
 	local currentCount = #scandata.image
-	if oldCount - earlyDeleteCount - expiredDeleteCount - corruptDeleteCount + newCount + filterNewCount - filterDeleteCount ~= currentCount then
-		local msg = ("%d old count - %d deleted - %d expired - %d corrupt + %d new + %d filtered new - %d filtered deleted != %d current count"):format(
-			oldCount, earlyDeleteCount, expiredDeleteCount, corruptDeleteCount, newCount, filterNewCount, filterDeleteCount, currentCount)
+	if oldCount - earlyDeleteCount - expiredDeleteCount - corruptDeleteCount + newCount + filterNewCount - filterDeleteCount - userDeleteCount ~= currentCount then
+		local msg = ("%d old count - %d deleted - %d expired - %d corrupt + %d new + %d filtered new - %d filtered deleted - %d user deleted != %d current count"):format(
+			oldCount, earlyDeleteCount, expiredDeleteCount, corruptDeleteCount, newCount, filterNewCount, filterDeleteCount, userDeleteCount, currentCount)
 		if nLog then
 			nLog.AddMessage("Auctioneer", "Scan", N_WARNING, "Image Count Discrepancy", msg)
 		end
