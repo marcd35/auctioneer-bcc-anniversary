@@ -435,6 +435,16 @@ do -- ScheduleMessage handler
 	EventFrame:SetScript("OnUpdate", OnUpdate)
 end
 
+-- Suppress "Internal Auction Error" which often appears spuriously in BCC on successful bids/buyouts
+if UIErrorsFrame then
+	local orig_UIErrorsFrame_AddMessage = UIErrorsFrame.AddMessage
+	UIErrorsFrame.AddMessage = function(self, msg, r, g, b, a, ...)
+		if msg == ERR_AUCTION_DATABASE_ERROR then
+			return
+		end
+		return orig_UIErrorsFrame_AddMessage(self, msg, r, g, b, a, ...)
+	end
+end
 
 AucAdvanced.RegisterRevision("$URL: Auc-Advanced/CoreMain.lua $", "$Rev: 6733 $")
 AucAdvanced.CoreFileCheckOut("CoreMain")
