@@ -400,7 +400,15 @@ function private.FinishedSearch(complete, querysig, query)
 			elseif request.foundInvalid then
 				-- we found a possible matching auction, but our bid price was too low
 				-- probably means someone else bid on the auction first
-				aucPrint("Auctioneer: Bid price too low for auction of "..request.link)
+				local queuedPrice = request.price
+				local requiredPrice = request.foundInvalidPrice
+				if requiredPrice then
+					aucPrint(highlight.."Auctioneer: Bid price mismatch for "..request.link.."! Your bid of "..AucAdvanced.Coins(queuedPrice).." is now too low. Current minimum required: "..AucAdvanced.Coins(requiredPrice))
+				else
+					aucPrint(highlight.."Auctioneer: Bid price mismatch for "..request.link.."! Bid was outbid since last scan.")
+				end
+				-- notify SearchMain so it can trigger a rescan if the Vendor searcher is active
+				AucAdvanced.SendProcessorMessage("bidpricemismatch", request.link, queuedPrice, requiredPrice)
 			else
 				aucPrint("Auctioneer: Auction for "..request.link.." no longer exists")
 			end
@@ -471,6 +479,8 @@ function lib.ScanPage(startat)
 							return
 						else
 							BuyRequest.foundInvalid = true
+							-- store the actual required price so FinishedSearch can report the discrepancy
+							BuyRequest.foundInvalidPrice = curBid + minIncrement
 						end
 					end
 				end

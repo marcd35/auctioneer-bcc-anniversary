@@ -15,6 +15,7 @@
 	<Script file="SearchRealTime.lua"/>
 	<script file="FilterTimeLeft.lua"/>
 	<script file="FilterItemQuality.lua"/>
+	<script file="FilterBuyBidDelta.lua"/>
 	<script file="FilterItemLevel.lua"/>
 	<script file="FilterItemPrice.lua"/>
 	<script file="FilterItemAuctionHistory.lua"/>

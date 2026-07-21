@@ -338,6 +338,27 @@ function lib.Processors.buyqueue(callbackType, ...)
 	end
 end
 
+-- bidpricemismatch: fired by CoreBuy when a queued bid is rejected because the AH bid has moved
+-- Prints a clear chat alert and re-runs the Vendor scan if it is the active searcher and SearchUI is visible.
+function lib.Processors.bidpricemismatch(callbackType, link, queuedPrice, requiredPrice)
+	-- only auto-rescan if the Vendor searcher is the active tab
+	if not (gui and gui:IsShown()) then return end
+	if not (gui.config and gui.config.selectedTab == "Vendor") then return end
+
+	local highlight = "|cffff7f3f"
+	local reset = "|r"
+	if requiredPrice and queuedPrice then
+		aucPrint(highlight.."SearchUI: Bid price mismatch for "..tostring(link).."!"..reset
+			.." Your queued bid of "..AucAdvanced.Coins(queuedPrice)
+			.." is outdated — current minimum is "..AucAdvanced.Coins(requiredPrice)
+			..". Re-running Vendor scan...")
+	else
+		aucPrint(highlight.."SearchUI: Bid price mismatch for "..tostring(link).."!"..reset
+			.." Snapshot data is stale. Re-running Vendor scan...")
+	end
+	lib.PerformSearch()
+end
+
 function lib.Processors.itemtooltip(callbackType, tooltip, hyperlink, serverKey, quantity, decoded, additional, order)
 	if not additional or additional.event ~= "SetAuctionItem" then
 		--this isn't an auction, so we're not interested
@@ -398,6 +419,7 @@ local settingDefaults = {
 	--Scrollframe defaults
 	["columnwidth.Item"] = 120,
 	["columnwidth.Pct"] = 30,
+	["columnwidth.DeltaPct"] = 40,
 	["columnwidth.Profit"] = 85,
 	["columnwidth.Stk"] = 30,
 	["columnwidth.Buyout"] = 85,
@@ -787,13 +809,13 @@ function private.purchaseall()
 
 		local data = gui.sheet:GetRowData(sortedRow)
 		local link = data[1]
-		local seller = data[8]
-		local stack = data[4]
-		local bid = data[6]
-		local minbid = data[12]
-		local curbid = data[13]
-		local buyout = data[5]
-		local reason = data[7]
+		local seller = data[9]   -- col 9: seller (shifted +1 by DeltaPct col)
+		local stack = data[5]    -- col 5: count
+		local bid = data[7]      -- col 7: bid/price
+		local minbid = data[13]  -- col 13: minbid
+		local curbid = data[14]  -- col 14: curbid
+		local buyout = data[6]   -- col 6: buyout
+		local reason = data[8]   -- col 8: reason
 		local price = 0
 
 		if strmatch(reason, ":buy") then
@@ -1577,13 +1599,13 @@ function private.MakeGuiConfig()
 				empty(private.data)
 			else
 				private.data.link = data[1]
-				private.data.seller = data[8]
-				private.data.stack = data[4]
-				private.data.bid = data[6]
-				private.data.minbid = data[12]
-				private.data.curbid = data[13]
-				private.data.buyout = data[5]
-				private.data.reason = data[7]
+				private.data.seller = data[9]   -- col 9: seller (shifted +1 by DeltaPct col)
+				private.data.stack = data[5]    -- col 5: count
+				private.data.bid = data[7]      -- col 7: bid/price
+				private.data.minbid = data[13]  -- col 13: minbid
+				private.data.curbid = data[14]  -- col 14: curbid
+				private.data.buyout = data[6]   -- col 6: buyout
+				private.data.reason = data[8]   -- col 8: reason
 			end
 			if private.data.buyout and (private.data.buyout > 0) then
 				gui.frame.buyout:Enable()
@@ -1628,7 +1650,7 @@ function private.MakeGuiConfig()
 	end
 
 	function lib.OnClickSheet(button, row, index)
-		index = index - (index%15-1)
+		index = index - (index%16-1) -- 16 columns after DeltaPct addition
 		if IsShiftKeyDown() then --Add the item link to chat
 			local link = gui.sheet.rows[row][index]:GetText()
 			if not link then
@@ -1673,6 +1695,7 @@ function private.MakeGuiConfig()
 	gui.sheet = ScrollSheet:Create(gui.frame, {
 		{ "Item",   "TOOLTIP", lib.GetSetting("columnwidth.Item") }, --120
 		{ "Pct",    "INT", lib.GetSetting("columnwidth.Pct")   }, --30
+		{ "Δ Pct",  "INT", lib.GetSetting("columnwidth.DeltaPct"), { DESCENDING=true } }, --40
 		{ "Profit", "COIN", lib.GetSetting("columnwidth.Profit") , { DESCENDING=true } }, --85
 		{ "Stk",    "INT",  lib.GetSetting("columnwidth.Stk")  }, --30
 		{ "Buyout", "COIN", lib.GetSetting("columnwidth.Buyout"), { DESCENDING=true } }, --85
@@ -2384,10 +2407,18 @@ function lib.SearchItem(searcherName, item, nodupes, skipresults)
 				local cur = item[Const.CURBID] or 0
 				local buy = item[Const.BUYOUT] or 0
 				local price = item[Const.PRICE] or 0
+				
+				local deltapct = 0
+				if buy > 0 then
+					deltapct = floor((buy - price) / buy * 100)
+				end
+				item["deltapct"] = deltapct
+
 				if not skipresults then
 					tinsert(private.sheetData, {
 						item[Const.LINK],
 						item["pct"],
+						item["deltapct"],
 						item["profit"],
 						count,
 						buy,
