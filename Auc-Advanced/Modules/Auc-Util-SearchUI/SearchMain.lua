@@ -979,9 +979,9 @@ function private.identifyall()
 	
 	for rowIndex, row in ipairs(private.sheetData) do
 		local link = row[1]
-		local seller = row[8]
-		local count = row[4] or 1
-		local buyout = row[5] or 0
+		local seller = row[9]
+		local count = row[5] or 1
+		local buyout = row[6] or 0
 		
 		if (not seller or seller == "") and link then
 			local itemName = link:match("|h%[(.-)%]|h") or GetItemInfo(link)
@@ -1083,7 +1083,7 @@ function private.onIdentifySellerResult()
 
 		for _, rowIndex in ipairs(private.pendingIdentify.rows) do
 			if private.sheetData[rowIndex] then
-				private.sheetData[rowIndex][8] = foundOwner
+				private.sheetData[rowIndex][9] = foundOwner
 			end
 			if gui.sheet.selected == rowIndex then
 				private.data.seller = foundOwner
