@@ -547,7 +547,7 @@ function private.PerformPurchase()
 		aucPrint(highlight.."Cancelling bid: Bid below minimum bid: "..AucAdvanced.Coins(price))
 		private.HidePrompt()
 		return
-	elseif (curBid and curBid > 0 and price < curBid + minIncrement and price < buyout) then -- ### todo: check and fix logic, looks worng here...
+	elseif (curBid and curBid > 0 and price < curBid + minIncrement and (not buyout or buyout <= 0 or price < buyout)) then
 		aucPrint(highlight.."Cancelling bid: Already higher bidder")
 		private.HidePrompt()
 		return
