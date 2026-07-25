@@ -714,8 +714,8 @@ function kit:SetPosition(parent, width, height, left, top)
 	height = height or self.dialogHeight
 	self.heightDelta = self.dialogHeight - height
 
-	self:SetParent(parent)
 	self:ClearAllPoints()
+	self:SetParent(parent)
 	if (top and left) then
 		self:SetPoint("TOPLEFT", parent, "BOTTOMLEFT", left, top)
 	else
