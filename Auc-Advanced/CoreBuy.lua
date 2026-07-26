@@ -469,9 +469,10 @@ function lib.ScanPage(startat)
 					and (count == BuyRequest.count)
 					and (minBid == BuyRequest.minbid)
 					and (buyout == BuyRequest.buyout) then --found the auction we were looking for
+						local reqBid = (curBid and curBid > 0) and (curBid + minIncrement) or minBid
 						if ishigh and (not buyout or buyout <= 0 or price < buyout) then
 							BuyRequest.foundHigh = true
-						elseif price >= curBid + minIncrement or price == buyout then
+						elseif price >= reqBid or price == buyout then
 							BuyRequest.index = ind
 							BuyRequest.texture = texture
 							private.QueueRemove(pos)
@@ -480,7 +481,7 @@ function lib.ScanPage(startat)
 						else
 							BuyRequest.foundInvalid = true
 							-- store the actual required price so FinishedSearch can report the discrepancy
-							BuyRequest.foundInvalidPrice = curBid + minIncrement
+							BuyRequest.foundInvalidPrice = reqBid
 						end
 					end
 				end
@@ -660,8 +661,9 @@ local function OnEvent(frame, event, message, message2)
 				if count == request.count and minBid == request.minbid and buyout == request.buyout then
 					local price = request.price
 					local sellername = request.sellername
+					local reqBid = (curBid and curBid > 0) and (curBid + minIncrement) or minBid
 					if (not owner or sellername == "" or owner == sellername)
-					and (price == buyout or (not ishigh and price >= curBid + minIncrement))
+					and (price == buyout or (not ishigh and price >= reqBid))
 					then
 						-- Everything matches up as before; no further action
 						return
