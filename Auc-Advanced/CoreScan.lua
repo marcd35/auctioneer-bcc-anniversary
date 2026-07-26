@@ -2857,7 +2857,8 @@ if not isSecure then
 end
 private.CanSend = CanSendAuctionQuery
 
-function QueryAuctionItems(name, minLevel, maxLevel, page, isUsable, qualityIndex, GetAll, exactMatch, filterData, ...) -- ### Legion check
+function QueryAuctionItems(...) -- ### Legion check
+	local name, minLevel, maxLevel, page, isUsable, qualityIndex, GetAll, exactMatch, filterData = ...
 	if not private.isAuctioneerQuery then
 		-- Optional bypass to handle compatibility problems with other AddOns
 		local doBypass = false
@@ -2873,7 +2874,7 @@ function QueryAuctionItems(name, minLevel, maxLevel, page, isUsable, qualityInde
 		end
 		doBypass = doBypass or not get("core.scan.scanallqueries")
 		if doBypass then
-			return private.Hook.QueryAuctionItems(name, minLevel, maxLevel, page, isUsable, qualityIndex, GetAll, exactMatch, filterData, ...)
+			return private.Hook.QueryAuctionItems(...)
 		end
 	end
 
@@ -2944,19 +2945,19 @@ function QueryAuctionItems(name, minLevel, maxLevel, page, isUsable, qualityInde
 	private.queryStarted = GetTime()
 	private.auctionItemListUpdated = false
 	return private.QuerySent(query, isSearch,
-		private.Hook.QueryAuctionItems(
-			name, minLevel, maxLevel, page, isUsable, qualityIndex, GetAll, exactMatch, filterData, ...))
+		private.Hook.QueryAuctionItems(...))
 end
 
 private.Hook.PlaceAuctionBid = PlaceAuctionBid
-function PlaceAuctionBid(type, index, bid, ...)
-	local itemData = lib.GetAuctionItem(type, index)
+function PlaceAuctionBid(...)
+	local type, index, bid = ...
+	local itemData = type and index and lib.GetAuctionItem(type, index)
 	if itemData then
 		private.Unpack(itemData, statItem)
 		local modules = AucAdvanced.GetAllModules("ScanProcessors")
 		for pos, engineLib in ipairs(modules) do
 			if engineLib.ScanProcessors["placebid"] then
-				local pOK, errormsg = pcall(engineLib.ScanProcessors["placebid"],"placebid", statItem, type, index, bid)
+				local pOK, errormsg = pcall(engineLib.ScanProcessors["placebid"],"placebid", statItem, ...)
 				if not pOK then
 					local text = ("Error trapped for ScanProcessor 'placebid' in module %s:\n%s"):format(engineLib.GetName(), errormsg)
 					if (_G.nLog) then _G.nLog.AddMessage("Auctioneer", "Scan", _G.N_ERROR, "ScanProcessor Error", text) end
@@ -2965,7 +2966,7 @@ function PlaceAuctionBid(type, index, bid, ...)
 			end
 		end
 	end
-	return private.Hook.PlaceAuctionBid(type, index, bid, ...)
+	return private.Hook.PlaceAuctionBid(...)
 end
 
 private.Hook.ClickAuctionSellItemButton = ClickAuctionSellItemButton
