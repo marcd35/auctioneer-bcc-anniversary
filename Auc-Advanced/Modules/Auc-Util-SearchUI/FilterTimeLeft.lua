@@ -37,6 +37,7 @@ local get,set,default,Const = AucSearchUI.GetSearchLocals()
 lib.tabname = "Timeleft"
 -- Set our defaults
 default("ignoretimeleft.enable", false)
+default("ignoretimeleft.qualifier", 4) -- Default to "Greater than" to match original behavior
 default("ignoretimeleft.maxtime", 2)
 
 -- This function is automatically called when we need to create our search parameters
@@ -56,11 +57,19 @@ function lib:MakeGuiConfig(gui)
 	local last = gui:GetLast(id)
 	gui:AddControl(id, "Checkbox",    0, 1,  "ignoretimeleft.enable", "Enable time-left filtering")
 	gui:AddControl(id, "Checkbox",    0, 2,  "ignoretimeleft.onlyonbids", "Only filter for bids")
-	gui:AddControl(id, "Subhead",     0,     "Filter if more than")
+	gui:AddControl(id, "Subhead",     0,     "Filter if time left is:")
 	gui:AddControl(id, "Selectbox",   0, 2, {
-			{1, "less than 30 min"},
-			{2, "2 hours"},
-			{3, "12 hours"},
+			{1, "Less than"},
+			{2, "Less than and equal to"},
+			{3, "Equal to"},
+			{4, "Greater than"},
+			{5, "Greater than and equal to"},
+		}, "ignoretimeleft.qualifier")
+	gui:AddControl(id, "Selectbox",   0, 2, {
+			{1, "30min"},
+			{2, "2hr"},
+			{3, "12hr"},
+			{4, "48hr"},
 		}, "ignoretimeleft.maxtime")
 
 	gui:SetLast(id, last)
@@ -84,11 +93,22 @@ function lib.Filter(item, searcher)
 			or (searcher and (not get("ignoretimeleft.filter."..searcher))) then
 		return
 	end
-	local maxtime = get("ignoretimeleft.maxtime")
+	local qualifier = get("ignoretimeleft.qualifier") or 4
+	local maxtime = get("ignoretimeleft.maxtime") or 2
 	--now to check the time left on the auction
 	local tleft = item[Const.TLEFT]
-	if tleft > maxtime then
-		return true, "Time left too high"
+	
+	local keep = false
+	if qualifier == 1 or qualifier == 2 then
+		keep = (tleft <= maxtime)
+	elseif qualifier == 3 then
+		keep = (tleft == maxtime)
+	elseif qualifier == 4 or qualifier == 5 then
+		keep = (tleft > maxtime)
+	end
+
+	if not keep then
+		return true, "Time left filtered"
 	end
 	return false
 end
@@ -101,11 +121,22 @@ function lib.PostFilter(item, searcher, buyorbid)
 			or (searcher and (not get("ignoretimeleft.filter."..searcher))) then
 		return
 	end
-	local maxtime = get("ignoretimeleft.maxtime")
+	local qualifier = get("ignoretimeleft.qualifier") or 4
+	local maxtime = get("ignoretimeleft.maxtime") or 2
 	--now to check the time left on the auction
 	local tleft = item[Const.TLEFT]
-	if tleft > maxtime then
-		return true, "Time left too high"
+	
+	local keep = false
+	if qualifier == 1 or qualifier == 2 then
+		keep = (tleft <= maxtime)
+	elseif qualifier == 3 then
+		keep = (tleft == maxtime)
+	elseif qualifier == 4 or qualifier == 5 then
+		keep = (tleft > maxtime)
+	end
+
+	if not keep then
+		return true, "Time left filtered"
 	end
 	return false
 end
