@@ -46,6 +46,8 @@ default("vendor.allow.bid", true)
 default("vendor.allow.buy", true)
 default("vendor.maxprice", 10000000)
 default("vendor.maxprice.enable", false)
+default("vendor.maxbuy", 10000000)
+default("vendor.maxbuy.enable", false)
 default("vendor.timeleft", 0)
 
 
@@ -110,6 +112,9 @@ function lib:MakeGuiConfig(gui)
 	gui:AddControl(id, "Checkbox",          0.42, 1, "vendor.maxprice.enable", "Enable individual maximum price:")
 	gui:AddTip(id, "Limit the maximum amount you want to spend with the Vendor searcher")
 	gui:AddControl(id, "MoneyFramePinned",  0.42, 2, "vendor.maxprice", 1, Const.MAXBIDPRICE, "Maximum Price for Vendor")
+	gui:AddControl(id, "Checkbox",          0.42, 1, "vendor.maxbuy.enable", "Enable maximum buyout price:")
+	gui:AddTip(id, "Exclude auctions with a buyout price greater than this amount")
+	gui:AddControl(id, "MoneyFramePinned",  0.42, 2, "vendor.maxbuy", 1, Const.MAXBIDPRICE, "Maximum Buyout Price")
 
 	gui:AddControl(id, "Note",       0, 1, 100, 14, "Bid TimeLeft:")
 	gui:AddControl(id, "Selectbox",  0, 1, private.getTimeLeftStrings(), "vendor.timeleft")
@@ -119,6 +124,11 @@ end
 function lib.Search(item)
 	local bidprice, buyprice = item[Const.PRICE], item[Const.BUYOUT]
 	local maxprice = get("vendor.maxprice.enable") and get("vendor.maxprice")
+	local maxbuy = get("vendor.maxbuy.enable") and get("vendor.maxbuy")
+
+	if maxbuy and buyprice > maxbuy then
+		return false, "Exceeds maximum buyout price"
+	end
 
 	if buyprice <= 0 or not get("vendor.allow.buy") or (maxprice and buyprice > maxprice) then
 		buyprice = nil
