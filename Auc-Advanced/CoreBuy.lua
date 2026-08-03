@@ -216,6 +216,7 @@ function lib.QueueBuy(link, seller, count, minbid, buyout, price, reason, nosear
 
 	local request = {
 		link = link,
+		sig = AucAdvanced.API.GetSigFromLink(link),
 		sellername = seller or "",
 		count = count,
 		minbid = minbid,
@@ -461,7 +462,7 @@ function lib.ScanPage(startat)
 			link = AucAdvanced.SanitizeLink(link)
 			for pos = #private.BuyRequests, 1, -1 do
 				local BuyRequest = private.BuyRequests[pos]
-				if link == BuyRequest.link then
+				if link == BuyRequest.link or (BuyRequest.sig and AucAdvanced.API.GetSigFromLink(link) == BuyRequest.sig) then
 					local price = BuyRequest.price
 					local brSeller = BuyRequest.sellername
 					local name, texture, count, _, _, _, _, minBid, minIncrement, buyout, curBid, ishigh, _, owner = GetAuctionItemInfo("list", ind)
@@ -540,7 +541,7 @@ function private.PerformPurchase()
 	link = AucAdvanced.SanitizeLink(link)
 	local name, texture, count, _, _, _, _, minBid, minIncrement, buyout, curBid = GetAuctionItemInfo("list", index)
 
-	if (private.CurRequest.link ~= link) then
+	if (private.CurRequest.link ~= link) and not (private.CurRequest.sig and AucAdvanced.API.GetSigFromLink(link) == private.CurRequest.sig) then
 		aucPrint(highlight.."Cancelling bid: "..index.." link does not match")
 		private.HidePrompt()
 		return
