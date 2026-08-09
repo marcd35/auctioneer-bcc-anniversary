@@ -29,3 +29,29 @@ This fork specifically addresses bugs introduced with the World of Warcraft Burn
 - **Buy/Bid Delta Filter**: Added a new filter and column (`Δ Pct`) to the SearchUI results grid. This allows users to view the percentage difference between the buyout price and current bid price, and optionally filter out auctions based on a minimum and/or maximum delta threshold. This feature is particularly useful for identifying arbitrage opportunities where a low bid on a high-value buyout item can yield significant profit.
 - **SearchUI TimeLeft Filter Refactor**: Improved the TimeLeft filter to allow more granular control. Replaced the "Filter if more than" dropdown with two separate dropdowns: a qualifier (Less than, Less than and equal to, Equal to, Greater than, Greater than and equal to) and a time option (30min, 2hr, 12hr, 48hr).
 - **Vendor Max Buyout Price**: Added new "Max Buyout Price" input box to Vendor tab which filters out auctions exceeding the input price.
+
+---
+
+## For Developers
+
+### Attribution Chain
+
+This repository sits at the end of a chain of contributors. When making changes, it is important that original authorship is preserved and that your own contributions are attributed correctly.
+
+| Role | Name |
+|------|------|
+| Original Author | [Norganna's AddOns](http://auctioneeraddon.com/) |
+| Crusade Fork | [crediar](https://www.curseforge.com/wow/addons/auctioneer-crusade) |
+| BCC Anniversary Fork | [marcd35](https://github.com/marcd35/auctioneer-bcc-anniversary) |
+
+### Header & Version Rules
+
+- **Do not change `## Author:`** — this always reflects the original upstream author (`Norganna's AddOns`).
+- **Use `## X-Maintainer:` for fork attribution** — add or update this field in the relevant `.toc` file(s) with your username. Do not embed your name inside the `## Version:` string.
+- **Version strings must be plain numbers only** — strings like `2.6.8 (marcd35)` are non-standard. Use `2.6.8` only.
+- **Only bump versions for modules you actually changed** — don't sweep-update unmodified modules.
+
+For the full versioning policy (when to bump patch vs. minor, which files to update, etc.) see [`docs/Versioning_Guide.md`](docs/Versioning_Guide.md).
+
+For the official `.toc` metadata field specification, see the **WoW TOC Format reference** on the community wiki:
+https://warcraft.wiki.gg/wiki/TOC_format
