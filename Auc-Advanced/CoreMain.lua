@@ -1,6 +1,6 @@
---[[
+﻿--[[
 	Auctioneer
-	Version: 2.6.8 (marcd35)
+	Version: 2.5.6733 (SwimmingSeadragon)
 	Revision: $Id: CoreMain.lua 6733 2022-01-25 11:42:44Z none $
 	URL: http://auctioneeraddon.com/
 
@@ -36,9 +36,6 @@
 --[[
 	See CoreAPI.lua for a description of the modules API
 ]]
--- BCC fix: Ensure this global is defined before Blizzard_AuctionUI loads to prevent nil arithmetic errors in AuctionProgressFrame_OnUpdate
-CASTING_BAR_ALPHA_STEP = CASTING_BAR_ALPHA_STEP or 0.05
-
 local AucAdvanced = AucAdvanced
 if not AucAdvanced then return end
 AucAdvanced.CoreFileCheckIn("CoreMain")
@@ -435,16 +432,6 @@ do -- ScheduleMessage handler
 	EventFrame:SetScript("OnUpdate", OnUpdate)
 end
 
--- Suppress "Internal Auction Error" which often appears spuriously in BCC on successful bids/buyouts
-if UIErrorsFrame then
-	local orig_UIErrorsFrame_AddMessage = UIErrorsFrame.AddMessage
-	UIErrorsFrame.AddMessage = function(self, msg, r, g, b, a, ...)
-		if msg == ERR_AUCTION_DATABASE_ERROR then
-			return
-		end
-		return orig_UIErrorsFrame_AddMessage(self, msg, r, g, b, a, ...)
-	end
-end
 
 AucAdvanced.RegisterRevision("$URL: Auc-Advanced/CoreMain.lua $", "$Rev: 6733 $")
 AucAdvanced.CoreFileCheckOut("CoreMain")

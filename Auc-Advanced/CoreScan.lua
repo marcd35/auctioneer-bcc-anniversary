@@ -1,6 +1,6 @@
- --[[
+--[[
 	Auctioneer
-	Version: 2.6.8 (marcd35)
+	Version: 2.5.6733 (SwimmingSeadragon)
 	Revision: $Id: CoreScan.lua 6733 2022-01-25 11:42:44Z none $
 	URL: http://auctioneeraddon.com/
 
@@ -945,45 +945,6 @@ function lib.QueryImage(query, serverKey, reserved, ...)
 	return queryResults
 end
 
--- lib.DeleteImageEntries(entries, serverKey)
--- Permanently removes the given live entry references from scandata.image.
--- 'entries' must be a table of live references previously returned by QueryImage.
--- This is an irreversible operation; entries will not reappear on the next search.
--- Also clears the SubImageCache and QueryImage cache so subsequent queries reflect the deletion.
--- Returns the number of entries actually removed.
-function lib.DeleteImageEntries(entries, serverKey)
-	if not entries or #entries == 0 then return 0 end
-	serverKey = serverKey or Resources.ServerKey
-	local scandata = private.GetScanData(serverKey)
-	if not scandata then return 0 end
-	local image = scandata.image
-
-	-- Build a set of references to delete for O(1) lookup
-	local toDelete = {}
-	for _, entry in ipairs(entries) do
-		toDelete[entry] = true
-		entry.deleted = true
-	end
-
-	-- Walk image backwards so tremove indices stay valid
-	local removed = 0
-	for i = #image, 1, -1 do
-		if toDelete[image[i]] then
-			tremove(image, i)
-			removed = removed + 1
-		end
-	end
-
-	-- Clear caches so QueryImage and SubImageCache reflect the deletions
-	if removed > 0 then
-		wipe(private.scandataIndex)
-		private.prevQueryServerKey = nil
-		private.queryResults = nil
-	end
-
-	return removed
-end
-
 
 private.CommitQueue = {}
 private.sessionFirstScan = true
@@ -1050,13 +1011,7 @@ local Commitfunction = function()
 		lib.ProgressBars("CommitProgressBar", 0, true)
 	end
 	local hadGetError = false
-	local scandataSnapshot = {}
-	for i = 1, #scandata.image do
-		if scandata.image[i] then
-			tinsert(scandataSnapshot, scandata.image[i])
-		end
-	end
-	local oldCount = #scandataSnapshot
+	local oldCount = #scandata.image
 	local scanCount = #TempcurScan
 
 	if wasGetAll and scanCount < 100 then
@@ -1328,7 +1283,7 @@ local Commitfunction = function()
 		local AucMaxTimes = Const.AucMaxTimes
 
 		nextPause = debugprofilestop() + processingTime
-		for _, data in ipairs(scandataSnapshot) do
+		for _, data in ipairs(scandata.image) do
 			if debugprofilestop() > nextPause then
 				lib.ProgressBars("CommitProgressBar", 100*progresscounter/progresstotal, true, "Auctioneer: Processing Stage 2")
 				coroutine.yield()
@@ -1466,7 +1421,6 @@ local Commitfunction = function()
 				if bitand(data[Const.FLAG], Const.FLAG_FILTER) ~= 0 then
 					filterOldCount = filterOldCount + 1
 				else
-					local newlyFiltered = false
 					-- Post-2.5.6 fix: seller names are often nil/empty on first scan due to deferred GUID resolution.
 					-- If the seller name was previously unknown ("") but is now resolved, re-run the filter
 					-- so that ignored sellers caught on subsequent scans are properly marked.
@@ -1476,28 +1430,27 @@ local Commitfunction = function()
 							data[Const.FLAG] = bitor(data[Const.FLAG] or 0, Const.FLAG_FILTER)
 							filterOldCount = filterOldCount + 1
 							workingImage[itemPos] = data
-							newlyFiltered = true
+							goto continueStage3
 						end
 					end
-					if not newlyFiltered then
-						if not private.IsIdentical(oldItem, data) then
-							if processStats(processors, "update", data, oldItem) then
-								updateCount = updateCount + 1
-							end
-							if bitand(oldItem[Const.FLAG], Const.FLAG_UNSEEN) ~= 0 then
-								updateRecoveredCount = updateRecoveredCount + 1
-							end
-						else
-							if processStats(processors, "leave", data) then
-								sameCount = sameCount + 1
-							end
-							if bitand(oldItem[Const.FLAG], Const.FLAG_UNSEEN) ~= 0 then
-								sameRecoveredCount = sameRecoveredCount + 1
-							end
+					if not private.IsIdentical(oldItem, data) then
+						if processStats(processors, "update", data, oldItem) then
+							updateCount = updateCount + 1
+						end
+						if bitand(oldItem[Const.FLAG], Const.FLAG_UNSEEN) ~= 0 then
+							updateRecoveredCount = updateRecoveredCount + 1
+						end
+					else
+						if processStats(processors, "leave", data) then
+							sameCount = sameCount + 1
+						end
+						if bitand(oldItem[Const.FLAG], Const.FLAG_UNSEEN) ~= 0 then
+							sameRecoveredCount = sameRecoveredCount + 1
 						end
 					end
 				end
 				workingImage[itemPos] = data
+				::continueStage3::
 			else
 				if (processStats(processors, messageCreate, data)) then
 					newCount = newCount + 1
@@ -1609,22 +1562,13 @@ local Commitfunction = function()
 		coroutine.yield()
 	end
 
-	local userDeleteCount = 0
-	for i = #workingImage, 1, -1 do
-		if workingImage[i].deleted then
-			workingImage[i].deleted = nil
-			tremove(workingImage, i)
-			userDeleteCount = userDeleteCount + 1
-		end
-	end
-
 	-- Store workingImage into the scandata record (replacing the old image)
 	scandata.image = workingImage
 
 	local currentCount = #scandata.image
-	if oldCount - earlyDeleteCount - expiredDeleteCount - corruptDeleteCount + newCount + filterNewCount - filterDeleteCount - userDeleteCount ~= currentCount then
-		local msg = ("%d old count - %d deleted - %d expired - %d corrupt + %d new + %d filtered new - %d filtered deleted - %d user deleted != %d current count"):format(
-			oldCount, earlyDeleteCount, expiredDeleteCount, corruptDeleteCount, newCount, filterNewCount, filterDeleteCount, userDeleteCount, currentCount)
+	if oldCount - earlyDeleteCount - expiredDeleteCount - corruptDeleteCount + newCount + filterNewCount - filterDeleteCount ~= currentCount then
+		local msg = ("%d old count - %d deleted - %d expired - %d corrupt + %d new + %d filtered new - %d filtered deleted != %d current count"):format(
+			oldCount, earlyDeleteCount, expiredDeleteCount, corruptDeleteCount, newCount, filterNewCount, filterDeleteCount, currentCount)
 		if nLog then
 			nLog.AddMessage("Auctioneer", "Scan", N_WARNING, "Image Count Discrepancy", msg)
 		end
@@ -2857,8 +2801,7 @@ if not isSecure then
 end
 private.CanSend = CanSendAuctionQuery
 
-function QueryAuctionItems(...) -- ### Legion check
-	local name, minLevel, maxLevel, page, isUsable, qualityIndex, GetAll, exactMatch, filterData = ...
+function QueryAuctionItems(name, minLevel, maxLevel, page, isUsable, qualityIndex, GetAll, exactMatch, filterData, ...) -- ### Legion check
 	if not private.isAuctioneerQuery then
 		-- Optional bypass to handle compatibility problems with other AddOns
 		local doBypass = false
@@ -2874,7 +2817,7 @@ function QueryAuctionItems(...) -- ### Legion check
 		end
 		doBypass = doBypass or not get("core.scan.scanallqueries")
 		if doBypass then
-			return private.Hook.QueryAuctionItems(...)
+			return private.Hook.QueryAuctionItems(name, minLevel, maxLevel, page, isUsable, qualityIndex, GetAll, exactMatch, filterData, ...)
 		end
 	end
 
@@ -2945,19 +2888,19 @@ function QueryAuctionItems(...) -- ### Legion check
 	private.queryStarted = GetTime()
 	private.auctionItemListUpdated = false
 	return private.QuerySent(query, isSearch,
-		private.Hook.QueryAuctionItems(...))
+		private.Hook.QueryAuctionItems(
+			name, minLevel, maxLevel, page, isUsable, qualityIndex, GetAll, exactMatch, filterData, ...))
 end
 
 private.Hook.PlaceAuctionBid = PlaceAuctionBid
-function PlaceAuctionBid(...)
-	local type, index, bid = ...
-	local itemData = type and index and lib.GetAuctionItem(type, index)
+function PlaceAuctionBid(type, index, bid, ...)
+	local itemData = lib.GetAuctionItem(type, index)
 	if itemData then
 		private.Unpack(itemData, statItem)
 		local modules = AucAdvanced.GetAllModules("ScanProcessors")
 		for pos, engineLib in ipairs(modules) do
 			if engineLib.ScanProcessors["placebid"] then
-				local pOK, errormsg = pcall(engineLib.ScanProcessors["placebid"],"placebid", statItem, ...)
+				local pOK, errormsg = pcall(engineLib.ScanProcessors["placebid"],"placebid", statItem, type, index, bid)
 				if not pOK then
 					local text = ("Error trapped for ScanProcessor 'placebid' in module %s:\n%s"):format(engineLib.GetName(), errormsg)
 					if (_G.nLog) then _G.nLog.AddMessage("Auctioneer", "Scan", _G.N_ERROR, "ScanProcessor Error", text) end
@@ -2966,7 +2909,7 @@ function PlaceAuctionBid(...)
 			end
 		end
 	end
-	return private.Hook.PlaceAuctionBid(...)
+	return private.Hook.PlaceAuctionBid(type, index, bid, ...)
 end
 
 private.Hook.ClickAuctionSellItemButton = ClickAuctionSellItemButton

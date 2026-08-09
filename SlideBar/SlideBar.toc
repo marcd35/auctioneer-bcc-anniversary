@@ -6,7 +6,7 @@
 ## LoadOnDemand: 0
 ## SavedVariables: SlideBarConfig
 ##
-## Version: 2.6.8 (marcd35)
+## Version: 2.5.6772
 ## Revision: $Id: SlideBar.toc 6771 2022-01-25 11:42:44Z none $
 ## Author: Norganna's AddOns
 ## X-Maintainer: marcd35

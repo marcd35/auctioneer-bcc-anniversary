@@ -8,7 +8,7 @@
 ## SavedVariables: EnchantConfig, EnchantedLocal, EnchantedItemTypes, NonDisenchantablesLocal, ProspectedLocal, MillingLocal, EnchantedDetailItemTypes
 ## SavedVariablesPerCharacter: AutoDisenchantIgnoreList
 ##
-## Version: 2.6.8 (marcd35)
+## Version: 2.6.7
 ## Revision: $Id: Enchantrix.toc 6768 2022-01-25 11:42:44Z none $
 ## Author: Norganna's AddOns
 ## X-Maintainer: marcd35

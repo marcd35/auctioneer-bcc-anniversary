@@ -1,6 +1,6 @@
 --[[
 	Auctioneer - BasicFilter
-	Version: 2.6.8 (marcd35)
+	Version: 2.5.6759 (SwimmingSeadragon)
 	Revision: $Id: BasicFilter.lua 6759 2022-01-25 11:42:44Z none $
 	URL: http://auctioneeraddon.com/
 

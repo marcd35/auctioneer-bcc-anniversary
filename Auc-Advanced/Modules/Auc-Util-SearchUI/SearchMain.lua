@@ -1,6 +1,6 @@
 --[[
 	Auctioneer - Search UI
-	Version: 2.6.8 (marcd35)
+	Version: 2.5.6750 (SwimmingSeadragon)
 	Revision: $Id: SearchMain.lua 6750 2022-01-25 11:42:44Z none $
 	URL: http://auctioneeraddon.com/
 
@@ -338,27 +338,6 @@ function lib.Processors.buyqueue(callbackType, ...)
 	end
 end
 
--- bidpricemismatch: fired by CoreBuy when a queued bid is rejected because the AH bid has moved
--- Prints a clear chat alert and re-runs the Vendor scan if it is the active searcher and SearchUI is visible.
-function lib.Processors.bidpricemismatch(callbackType, link, queuedPrice, requiredPrice)
-	-- only auto-rescan if the Vendor searcher is the active tab
-	if not (gui and gui:IsShown()) then return end
-	if not (gui.config and gui.config.selectedTab == "Vendor") then return end
-
-	local highlight = "|cffff7f3f"
-	local reset = "|r"
-	if requiredPrice and queuedPrice then
-		aucPrint(highlight.."SearchUI: Bid price mismatch for "..tostring(link).."!"..reset
-			.." Your queued bid of "..AucAdvanced.Coins(queuedPrice)
-			.." is outdated — current minimum is "..AucAdvanced.Coins(requiredPrice)
-			..". Re-running Vendor scan...")
-	else
-		aucPrint(highlight.."SearchUI: Bid price mismatch for "..tostring(link).."!"..reset
-			.." Snapshot data is stale. Re-running Vendor scan...")
-	end
-	lib.PerformSearch()
-end
-
 function lib.Processors.itemtooltip(callbackType, tooltip, hyperlink, serverKey, quantity, decoded, additional, order)
 	if not additional or additional.event ~= "SetAuctionItem" then
 		--this isn't an auction, so we're not interested
@@ -419,7 +398,6 @@ local settingDefaults = {
 	--Scrollframe defaults
 	["columnwidth.Item"] = 120,
 	["columnwidth.Pct"] = 30,
-	["columnwidth.DeltaPct"] = 40,
 	["columnwidth.Profit"] = 85,
 	["columnwidth.Stk"] = 30,
 	["columnwidth.Buyout"] = 85,
@@ -809,13 +787,13 @@ function private.purchaseall()
 
 		local data = gui.sheet:GetRowData(sortedRow)
 		local link = data[1]
-		local seller = data[9]   -- col 9: seller (shifted +1 by DeltaPct col)
-		local stack = data[5]    -- col 5: count
-		local bid = data[7]      -- col 7: bid/price
-		local minbid = data[13]  -- col 13: minbid
-		local curbid = data[14]  -- col 14: curbid
-		local buyout = data[6]   -- col 6: buyout
-		local reason = data[8]   -- col 8: reason
+		local seller = data[8]
+		local stack = data[4]
+		local bid = data[6]
+		local minbid = data[12]
+		local curbid = data[13]
+		local buyout = data[5]
+		local reason = data[7]
 		local price = 0
 
 		if strmatch(reason, ":buy") then
@@ -894,262 +872,6 @@ function private.ignoretemp()
 	aucPrint("SearchUI now ignoring "..private.data.link.." at "..AucAdvanced.Coins(price, true).." for the session")
 	private.removeline()
 end
-
-function private.ignoreseller()
-	local seller = private.data.seller
-	if seller and seller ~= "" then
-		if AucAdvanced.Modules.Filter and AucAdvanced.Modules.Filter.Basic and AucAdvanced.Modules.Filter.Basic.AddPlayerIgnore then
-			AucAdvanced.Modules.Filter.Basic.AddPlayerIgnore(seller)
-			aucPrint("SearchUI now ignoring seller "..seller)
-			private.removeline()
-		end
-	end
-end
-
-function private.identifyseller()
-	if not (AuctionFrame and AuctionFrame:IsShown()) then
-		aucPrint("Please open the Auction House to identify the seller.")
-		return
-	end
-
-	local seller = private.data.seller
-	local link = private.data.link
-	local buyout = private.data.buyout or 0
-	local stack = private.data.stack or 1
-	
-	if seller and seller ~= "" then
-		aucPrint("Seller is already identified: "..seller)
-		return
-	end
-	
-	if not link then
-		aucPrint("No auction selected to identify.")
-		return
-	end
-
-	local itemName = link:match("|h%[(.-)%]|h") or GetItemInfo(link)
-	if not itemName then
-		aucPrint("Could not determine item name to identify.")
-		return
-	end
-
-	if private.identifyQueueMode then
-		aucPrint("Bulk identification in progress. Stop it first.")
-		return
-	end
-
-	private.pendingIdentify = {
-		name = itemName,
-		link = AucAdvanced.SanitizeLink(link),
-		buyout = buyout,
-		count = stack,
-		rows = { gui.sheet.selected },
-		page = 0,
-		state = "waiting_to_query"
-	}
-	
-	aucPrint("Querying AH for seller of "..itemName.."...")
-end
-
-function private.identifyall()
-	if private.identifyQueueMode then
-		private.identifyQueueMode = false
-		private.identifyQueue = nil
-		private.pendingIdentify = nil
-		if private.identifyFrame then
-			private.identifyFrame:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
-		end
-		gui.frame.identifyall:SetText("? All")
-		aucPrint("Bulk identification stopped.")
-		return
-	end
-
-	if not (AuctionFrame and AuctionFrame:IsShown()) then
-		aucPrint("Please open the Auction House to identify sellers.")
-		return
-	end
-	
-	if not private.sheetData or #private.sheetData == 0 then
-		aucPrint("No search results to identify.")
-		return
-	end
-	
-	private.identifyQueue = {}
-	local itemsAdded = {}
-	
-	for rowIndex, row in ipairs(private.sheetData) do
-		local link = row[1]
-		local seller = row[9]
-		local count = row[5] or 1
-		local buyout = row[6] or 0
-		
-		if (not seller or seller == "") and link then
-			local itemName = link:match("|h%[(.-)%]|h") or GetItemInfo(link)
-			if itemName then
-				-- We identify uniquely by name, link, buyout, count
-				local uid = itemName.."|"..link.."|"..buyout.."|"..count
-				if not itemsAdded[uid] then
-					itemsAdded[uid] = {
-						name = itemName,
-						link = AucAdvanced.SanitizeLink(link),
-						buyout = buyout,
-						count = count,
-						rows = { rowIndex }
-					}
-					tinsert(private.identifyQueue, itemsAdded[uid])
-				else
-					tinsert(itemsAdded[uid].rows, rowIndex)
-				end
-			end
-		end
-	end
-	
-	if #private.identifyQueue == 0 then
-		aucPrint("All sellers are already identified.")
-		return
-	end
-	
-	private.identifyQueueMode = true
-	gui.frame.identifyall:SetText("Stop ?")
-	aucPrint("Starting bulk identification for "..#private.identifyQueue.." unique auctions...")
-end
-
-function private.processIdentifyQueue()
-	if not private.identifyQueueMode then return end
-	
-	if not private.identifyQueue or #private.identifyQueue == 0 then
-		private.identifyQueueMode = false
-		gui.frame.identifyall:SetText("? All")
-		aucPrint("Done identifying sellers.")
-		return
-	end
-	
-	local nextIdentify = tremove(private.identifyQueue, 1)
-	private.pendingIdentify = {
-		name = nextIdentify.name,
-		link = nextIdentify.link,
-		buyout = nextIdentify.buyout,
-		count = nextIdentify.count,
-		rows = nextIdentify.rows,
-		page = 0,
-		state = "waiting_to_query"
-	}
-end
-
-function private.onIdentifySellerResult()
-	if private.identifyFrame then
-		private.identifyFrame:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
-	end
-	
-	if not private.pendingIdentify or private.pendingIdentify.state ~= "waiting_for_event" then return end
-	
-	local foundOwner = nil
-	local batch, total = GetNumAuctionItems("list")
-	for i = 1, batch do
-		local link = GetAuctionItemLink("list", i)
-		if link then
-			link = AucAdvanced.SanitizeLink(link)
-			local name, texture, count, quality, canUse, level, levelColHeader, minBid, minIncrement, buyoutPrice, bidAmount, highBidder, bidderFullName, owner = GetAuctionItemInfo("list", i)
-			
-			if link == private.pendingIdentify.link and count == private.pendingIdentify.count and buyoutPrice == private.pendingIdentify.buyout then
-				if owner and owner ~= "" then
-					foundOwner = owner
-					break
-				end
-			end
-		end
-	end
-	
-	if foundOwner then
-		local itemName = private.pendingIdentify.name
-		aucPrint((itemName or "Item")..": seller is "..foundOwner)
-
-		-- Persist seller name into the live scan image so it survives re-searches
-		local Const = AucAdvanced.Const
-		local imageResults = AucAdvanced.Scan.QueryImage({
-			link = private.pendingIdentify.link,
-			minStack = private.pendingIdentify.count,
-			maxStack = private.pendingIdentify.count,
-			minBuyout = private.pendingIdentify.buyout,
-			maxBuyout = private.pendingIdentify.buyout,
-		})
-		if imageResults then
-			for _, imageEntry in ipairs(imageResults) do
-				if not imageEntry[Const.SELLER] or imageEntry[Const.SELLER] == "" then
-					imageEntry[Const.SELLER] = foundOwner
-				end
-			end
-		end
-
-		for _, rowIndex in ipairs(private.pendingIdentify.rows) do
-			if private.sheetData[rowIndex] then
-				private.sheetData[rowIndex][9] = foundOwner
-			end
-			if gui.sheet.selected == rowIndex then
-				private.data.seller = foundOwner
-			end
-		end
-		gui.sheet:SetData(private.sheetData, private.sheetStyle)
-		gui.sheet:Render()
-		private.pendingIdentify = nil
-	else
-		if total > (private.pendingIdentify.page + 1) * 50 then
-			private.pendingIdentify.page = private.pendingIdentify.page + 1
-			private.pendingIdentify.state = "waiting_to_query"
-		else
-			local itemName = private.pendingIdentify.name
-			aucPrint((itemName or "Item")..": seller not found on AH. Removing from list")
-			
-			-- Permanently remove this auction from the live scan database so it
-			-- will not reappear in future searches. QueryImage returns live
-			-- references into scandata.image, so DeleteImageEntries can splice
-			-- them out directly.
-			local Const = AucAdvanced.Const
-			local imageResults = AucAdvanced.Scan.QueryImage({
-				link = private.pendingIdentify.link,
-				minStack = private.pendingIdentify.count,
-				maxStack = private.pendingIdentify.count,
-				minBuyout = private.pendingIdentify.buyout,
-				maxBuyout = private.pendingIdentify.buyout,
-			})
-			if imageResults and #imageResults > 0 then
-				local removed = AucAdvanced.Scan.DeleteImageEntries(imageResults)
-				if removed > 0 then
-					aucPrint((itemName or "Item")..": purged "..removed.." stale entr"..(removed == 1 and "y" or "ies").." from database.")
-				end
-			end
-
-			local rowsToRemove = {}
-			for _, rowIndex in ipairs(private.pendingIdentify.rows) do
-				tinsert(rowsToRemove, rowIndex)
-			end
-			table.sort(rowsToRemove, function(a, b) return a > b end)
-			
-			for _, rowIndex in ipairs(rowsToRemove) do
-				tremove(private.sheetData, rowIndex)
-				local sheetTotal = #private.sheetData
-				for i = rowIndex, sheetTotal do
-					private.sheetStyle[i] = private.sheetStyle[i+1]
-				end
-				private.sheetStyle[sheetTotal+1] = nil
-
-				if gui.sheet.selected == rowIndex then
-					gui.sheet.selected = nil
-					empty(private.data)
-				elseif gui.sheet.selected and gui.sheet.selected > rowIndex then
-					gui.sheet.selected = gui.sheet.selected - 1
-				end
-			end
-			
-			gui.sheet:SetData(private.sheetData, private.sheetStyle)
-			gui.sheet:Render()
-			lib.UpdateControls()
-			
-			private.pendingIdentify = nil
-		end
-	end
-end
-
 
 function private.snatch()
 	local link = private.data.link
@@ -1385,8 +1107,8 @@ function private.CreateAuctionFrames()
 
 	frame.money = frame:CreateTexture(nil, "ARTWORK")
 	frame.money:SetTexture("Interface\\AddOns\\Auc-Advanced\\Textures\\GoldMoney")
-	frame.money:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 20, 34)
-	frame.money:SetWidth(240)
+	frame.money:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, 34)
+	frame.money:SetWidth(256)
 	frame.money:SetHeight(32)
 
 	frame.backing = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
@@ -1575,23 +1297,12 @@ function private.MakeGuiConfig()
 			gui.frame.ignoreperm:Enable()
 			gui.frame.notnow:Enable()
 			gui.frame.snatch:Enable()
-			gui.frame.ignoreseller:Enable()
-			gui.frame.identifyseller:Enable()
 		else
 			gui.frame.ignore:Disable()
 			gui.frame.ignoreperm:Disable()
 			gui.frame.notnow:Disable()
 			gui.frame.snatch:Disable()
-			gui.frame.ignoreseller:Disable()
-			gui.frame.identifyseller:Disable()
 		end
-
-		if private.sheetData and #private.sheetData > 0 then
-			if gui.frame.identifyall then gui.frame.identifyall:Enable() end
-		else
-			if gui.frame.identifyall then gui.frame.identifyall:Disable() end
-		end
-
 		if selected ~= gui.sheet.selected then
 			selected = gui.sheet.selected
 			local data = gui.sheet:GetSelection()
@@ -1599,13 +1310,13 @@ function private.MakeGuiConfig()
 				empty(private.data)
 			else
 				private.data.link = data[1]
-				private.data.seller = data[9]   -- col 9: seller (shifted +1 by DeltaPct col)
-				private.data.stack = data[5]    -- col 5: count
-				private.data.bid = data[7]      -- col 7: bid/price
-				private.data.minbid = data[13]  -- col 13: minbid
-				private.data.curbid = data[14]  -- col 14: curbid
-				private.data.buyout = data[6]   -- col 6: buyout
-				private.data.reason = data[8]   -- col 8: reason
+				private.data.seller = data[8]
+				private.data.stack = data[4]
+				private.data.bid = data[6]
+				private.data.minbid = data[12]
+				private.data.curbid = data[13]
+				private.data.buyout = data[5]
+				private.data.reason = data[7]
 			end
 			if private.data.buyout and (private.data.buyout > 0) then
 				gui.frame.buyout:Enable()
@@ -1650,7 +1361,7 @@ function private.MakeGuiConfig()
 	end
 
 	function lib.OnClickSheet(button, row, index)
-		index = index - (index%16-1) -- 16 columns after DeltaPct addition
+		index = index - (index%15-1)
 		if IsShiftKeyDown() then --Add the item link to chat
 			local link = gui.sheet.rows[row][index]:GetText()
 			if not link then
@@ -1695,7 +1406,6 @@ function private.MakeGuiConfig()
 	gui.sheet = ScrollSheet:Create(gui.frame, {
 		{ "Item",   "TOOLTIP", lib.GetSetting("columnwidth.Item") }, --120
 		{ "Pct",    "INT", lib.GetSetting("columnwidth.Pct")   }, --30
-		{ "Δ Pct",  "INT", lib.GetSetting("columnwidth.DeltaPct"), { DESCENDING=true } }, --40
 		{ "Profit", "COIN", lib.GetSetting("columnwidth.Profit") , { DESCENDING=true } }, --85
 		{ "Stk",    "INT",  lib.GetSetting("columnwidth.Stk")  }, --30
 		{ "Buyout", "COIN", lib.GetSetting("columnwidth.Buyout"), { DESCENDING=true } }, --85
@@ -1936,36 +1646,6 @@ function private.MakeGuiConfig()
 	gui.frame.snatch:SetScript("OnEnter", showTooltipText)
 	gui.frame.snatch:SetScript("OnLeave", hideTooltip)
 
-	gui.frame.ignoreseller = CreateFrame("Button", nil, gui.frame, "UIPanelButtonTemplate")
-	gui.frame.ignoreseller:SetPoint("TOP", gui.frame.snatch, "BOTTOM", 0, -2)
-	gui.frame.ignoreseller:SetText("Ignore Seller")
-	gui.frame.ignoreseller:SetWidth(100)
-	gui.frame.ignoreseller:SetScript("OnClick", private.ignoreseller)
-	gui.frame.ignoreseller:Disable()
-	gui.frame.ignoreseller.TooltipText = "add seller to ignore list"
-	gui.frame.ignoreseller:SetScript("OnEnter", showTooltipText)
-	gui.frame.ignoreseller:SetScript("OnLeave", hideTooltip)
-
-	gui.frame.identifyseller = CreateFrame("Button", nil, gui.frame, "UIPanelButtonTemplate")
-	gui.frame.identifyseller:SetPoint("LEFT", gui.frame.snatch, "RIGHT", 4, 0)
-	gui.frame.identifyseller:SetText("? Row")
-	gui.frame.identifyseller:SetWidth(60)
-	gui.frame.identifyseller:SetScript("OnClick", private.identifyseller)
-	gui.frame.identifyseller:Disable()
-	gui.frame.identifyseller.TooltipText = "Attempts to query the server to identify the seller"
-	gui.frame.identifyseller:SetScript("OnEnter", showTooltipText)
-	gui.frame.identifyseller:SetScript("OnLeave", hideTooltip)
-
-	gui.frame.identifyall = CreateFrame("Button", nil, gui.frame, "UIPanelButtonTemplate")
-	gui.frame.identifyall:SetPoint("LEFT", gui.frame.ignoreseller, "RIGHT", 4, 0)
-	gui.frame.identifyall:SetText("? All")
-	gui.frame.identifyall:SetWidth(60)
-	gui.frame.identifyall:SetScript("OnClick", private.identifyall)
-	gui.frame.identifyall:Disable()
-	gui.frame.identifyall.TooltipText = "Attempts to query the server to identify sellers for all search results"
-	gui.frame.identifyall:SetScript("OnEnter", showTooltipText)
-	gui.frame.identifyall:SetScript("OnLeave", hideTooltip)
-
 	gui.frame.clear = CreateFrame("Button", nil, gui.frame, "UIPanelButtonTemplate")
 	gui.frame.clear:SetPoint("TOP", gui.Search, "BOTTOM", 0, -5)
 	gui.frame.clear:SetText("Clear")
@@ -1977,9 +1657,8 @@ function private.MakeGuiConfig()
 	gui.frame.clear:SetScript("OnLeave", hideTooltip)
 
 	gui.frame.cancel = CreateFrame("Button", "AucAdvSearchUICancelButton", gui.frame, "UIPanelButtonTemplate")
-	gui.frame.cancel:SetPoint("BOTTOMLEFT", gui, "BOTTOMLEFT", 15, 30)
-	gui.frame.cancel:SetText("Cancel")
-	gui.frame.cancel:SetWidth(140)
+	gui.frame.cancel:SetPoint("BOTTOMLEFT", gui, "BOTTOMLEFT", 30, 30)
+	gui.frame.cancel:SetWidth(22)
 	gui.frame.cancel:SetHeight(18)
 	gui.frame.cancel:Disable()
 	gui.frame.cancel:SetScript("OnClick", function()
@@ -1994,16 +1673,28 @@ function private.MakeGuiConfig()
 			queuecost = queuecost + promptcost
 		end
 		if queuelen > 0 then
-			gui.frame.cancel:SetText(tostring(queuelen)..": "..AucAdvanced.Coins(queuecost, true))
+			gui.frame.cancel.label:SetText(tostring(queuelen)..": "..AucAdvanced.Coins(queuecost, true))
 			gui.frame.cancel.value = queuecost
 			gui.frame.cancel:Enable()
+			gui.frame.cancel.tex:SetVertexColor(1.0, 0.9, 0.1)
 		else
-			gui.frame.cancel:SetText("Cancel")
+			gui.frame.cancel.label:SetText("")
 			gui.frame.cancel.value = 0
 			gui.frame.cancel:Disable()
+			gui.frame.cancel.tex:SetVertexColor(0.3, 0.3, 0.3)
 		end
 	end
-
+	gui.frame.cancel.tex = gui.frame.cancel:CreateTexture(nil, "OVERLAY")
+	gui.frame.cancel.tex:SetPoint("TOPLEFT", gui.frame.cancel, "TOPLEFT", 4, -2)
+	gui.frame.cancel.tex:SetPoint("BOTTOMRIGHT", gui.frame.cancel, "BOTTOMRIGHT", -4, 2)
+	gui.frame.cancel.tex:SetTexture("Interface\\Addons\\Auc-Advanced\\Textures\\NavButtons")
+	gui.frame.cancel.tex:SetTexCoord(0.25, 0.5, 0, 1)
+	gui.frame.cancel.tex:SetVertexColor(0.3, 0.3, 0.3)
+	gui.frame.cancel.label = gui.frame.cancel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	gui.frame.cancel.label:SetPoint("LEFT", gui.frame.cancel, "RIGHT", 5, 0)
+	gui.frame.cancel.label:SetTextColor(1, 0.8, 0)
+	gui.frame.cancel.label:SetText("")
+	gui.frame.cancel.label:SetJustifyH("LEFT")
 
 	gui.frame.buyout = CreateFrame("Button", nil, gui.frame, "UIPanelButtonTemplate")
 	gui.frame.buyout:SetPoint("LEFT", gui.frame.notnow, "RIGHT", 5, 0)
@@ -2271,14 +1962,6 @@ function lib.SearchItem(searcherName, item, nodupes, skipresults)
 	if item[Const.SELLER] == UnitName("player") then
 		return false, "Blocked: Can't buy own auction"
 	end
-	if bit.band(item[Const.FLAG] or 0, Const.FLAG_UNSEEN) ~= 0 then
-		return false, "Blocked: Auction is stale (unseen)"
-	end
-	if AucAdvanced.Modules.Filter and AucAdvanced.Modules.Filter.Basic and AucAdvanced.Modules.Filter.Basic.IsPlayerIgnored then
-		if AucAdvanced.Modules.Filter.Basic.IsPlayerIgnored(item[Const.SELLER]) then
-			return false, "Blocked: Seller is on ignore list"
-		end
-	end
 	local searcher = lib.Searchers[searcherName]
 	if not searcher then
 		return
@@ -2407,18 +2090,10 @@ function lib.SearchItem(searcherName, item, nodupes, skipresults)
 				local cur = item[Const.CURBID] or 0
 				local buy = item[Const.BUYOUT] or 0
 				local price = item[Const.PRICE] or 0
-				
-				local deltapct = 0
-				if buy > 0 then
-					deltapct = floor((buy - price) / buy * 100)
-				end
-				item["deltapct"] = deltapct
-
 				if not skipresults then
 					tinsert(private.sheetData, {
 						item[Const.LINK],
 						item["pct"],
-						item["deltapct"],
 						item["profit"],
 						count,
 						buy,
@@ -2560,22 +2235,6 @@ function lib.PerformSearch(searcher)
 end
 
 local function OnUpdate(self, elapsed)
-	if private.pendingIdentify then
-		if private.pendingIdentify.state == "waiting_to_query" then
-			if CanSendAuctionQuery() then
-				private.pendingIdentify.state = "waiting_for_event"
-				if not private.identifyFrame then
-					private.identifyFrame = CreateFrame("Frame")
-					private.identifyFrame:SetScript("OnEvent", private.onIdentifySellerResult)
-				end
-				private.identifyFrame:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
-				QueryAuctionItems(private.pendingIdentify.name, nil, nil, private.pendingIdentify.page, nil, nil, nil, true)
-			end
-		end
-	elseif private.identifyQueueMode then
-		private.processIdentifyQueue()
-	end
-
 	if coSearch then
 		if coroutine.status(coSearch) == "suspended" then
 			local status, result = coroutine.resume(coSearch)
@@ -2597,11 +2256,6 @@ local function OnUpdate(self, elapsed)
 			flagRescan = nil
 			CooldownFrame_Set(private.gui.Rescan.frame, 0, 0, false)
 			private.gui.Search:Enable()
-			-- Discard any stale/suspended search coroutine so that PerformSearch
-			-- always creates a fresh one using the newly-collected scan image.
-			-- Without this, lib.PerformSearch() silently skips if coSearch is
-			-- still suspended from a previous search, leaving old results on screen.
-			coSearch = nil
 			lib.PerformSearch()
 		else
 			--if scan still in progress, keep the button churnin'
