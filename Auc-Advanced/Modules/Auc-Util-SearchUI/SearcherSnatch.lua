@@ -540,7 +540,7 @@ end
 function private.finishedItem()
 	--reset UI
 	frame.slot.help:SetText(("Drop item into box"))
-	frame.icon:SetNormalTexture("")
+	frame.icon:ClearNormalTexture()
 	frame.pctBox:SetText("")
 	private.setMoneyFrame()
 	--reset current working item
@@ -583,7 +583,11 @@ function lib.SetWorkingItem(link)
 			texture = icon
 		end
 	end
-	frame.icon:SetNormalTexture(texture) --set icon texture
+	if texture then
+		frame.icon:SetNormalTexture(texture)
+	else
+		frame.icon:ClearNormalTexture()
+	end
 	frame.slot.help:SetText(link)
 
 	--set current working item

@@ -19,6 +19,8 @@ This fork specifically addresses bugs introduced with the World of Warcraft Burn
 - **SearchUI Purchase Column Index Regression**: Fixed a bug where adding the `Δ Pct` column to the results grid shifted all subsequent column indices, causing incorrect data (e.g., the item stack count) to be read as the bid price. This produced a "Price cannot be less than the minimum bid" error on any purchase attempt. All hardcoded column index references and the `OnClickSheet` column modulo were corrected.
 - **Stale Bid Price Silent Failure**: Fixed a bug where a queued bid attempt would fail silently if another player had outbid the queued price between the last scan and the purchase attempt. The error message now includes both the queued bid amount and the current minimum required, and the Vendor searcher is automatically re-run to refresh results.
 - **Random Enchantment Item Fix**: Fixed failed bid errors on random enchantment items
+- **SetNormalTexture C++ API Binding Fix**: Fixed `bad argument #2 to '?' (Usage: self:SetNormalTexture(asset))` errors when setting or clearing button icons. Modern WoW API C++ bindings require a non-nil string or file ID asset parameter, whereas legacy Lua allowed `nil` or omitted parameters. Updated `SetNormalTexture` calls across `StatHistogram`, `SlideBar`, `AutoMagic`, `SearchUI`, `SimpleAuction`, `Enchantrix`, and `Configator` to pass non-nil fallback values.
+- **CompactUI Icon Display Fix**: Fixed an issue in `CompactUI` where each auction item icon displayed a smaller inner square border (`UI-Quickslot2`) and disappeared when hovered. Removed the redundant normal texture border overlay and prevented the icon texture from un-anchoring and moving off-screen during `OnEnter`/`OnLeave`.
 
 ### New Features
 

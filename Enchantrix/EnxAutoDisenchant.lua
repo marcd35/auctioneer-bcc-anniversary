@@ -1,4 +1,4 @@
-﻿--[[
+--[[
 	Enchantrix Addon for World of Warcraft(tm).
 	Version: 2.5.6768 (SwimmingSeadragon)
 	Revision: $Id: EnxAutoDisenchant.lua 6768 2022-01-25 11:42:44Z none $
@@ -531,7 +531,11 @@ function showPrompt(link, bag, slot, value, spell)
 	auto_de_prompt.time = GetTime()		-- not yet used
 
 	local texture = GetItemIcon(auto_de_prompt.link)
-	auto_de_prompt.Item:SetNormalTexture(texture)
+	if texture then
+		auto_de_prompt.Item:SetNormalTexture(texture)
+	else
+		auto_de_prompt.Item:ClearNormalTexture()
+	end
 	--debugSpam("item link used:", auto_de_prompt.link, itemStringFromLink(auto_de_prompt.link), auto_de_prompt.bag, auto_de_prompt.slot)
 
 	-- auto_de_prompt.Yes:SetAttribute("target-item", itemStringFromLink(auto_de_prompt.link))	-- this sees zombies for identical links in WoW 6.x

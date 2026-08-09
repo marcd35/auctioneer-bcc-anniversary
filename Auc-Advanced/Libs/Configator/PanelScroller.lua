@@ -291,11 +291,17 @@ local function ButtonTemplate(name, parent, normalPath, pushedPath, disabledPath
 	button:SetWidth(16)
 	button:SetHeight(16)
 
-	button:SetNormalTexture(normalPath)
-	button:GetNormalTexture():SetTexCoord(.25, .75, .25, .75)
+	if normalPath then
+		button:SetNormalTexture(normalPath)
+		button:GetNormalTexture():SetTexCoord(.25, .75, .25, .75)
+	else
+		button:ClearNormalTexture()
+	end
 
-	button:SetPushedTexture(pushedPath)
-	button:GetPushedTexture():SetTexCoord(.25, .75, .25, .75)
+	if pushedPath then
+		button:SetPushedTexture(pushedPath)
+		button:GetPushedTexture():SetTexCoord(.25, .75, .25, .75)
+	end
 
 	if disabledPath then
 		button:SetDisabledTexture(disabledPath)

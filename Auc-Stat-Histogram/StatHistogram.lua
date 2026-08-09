@@ -515,7 +515,7 @@ end
 function lib.SetWorkingItem(link)
 	--clear the graph
 	frame.name:SetText(_TRANS('SHTG_Interface_InsertItemStart') )--Insert or Alt-Click Item to start
-	frame.icon:SetNormalTexture(nil) --set icon texture
+	frame.icon:ClearNormalTexture() --set icon texture
 	frame.med:SetText("")
 	frame.max:SetText("")
 	frame.link = nil
@@ -542,7 +542,11 @@ function lib.SetWorkingItem(link)
 
 	frame.name:SetText(link)
 	frame.link = link
-	frame.icon:SetNormalTexture(texture) --set icon texture
+	if texture then
+		frame.icon:SetNormalTexture(texture)
+	else
+		frame.icon:ClearNormalTexture()
+	end
 
 
 	if not private.StatTableOpen(Resources.ServerKey, itemID, property) then return end -- fill in StatTable, bail if no data

@@ -18,9 +18,10 @@
 ## Category-zhTW: 拍賣
 ## SavedVariables: AucAdvancedStatHistogramData
 ##
-## Version: 2.6.0 (crediar)
+## Version: 2.6.8 (marcd35)
 ## Revision: $Id: Auc-Stat-Histogram.toc 6761 2022-01-25 11:42:44Z none $
 ## Author: Norganna's AddOns
+## X-Maintainer: marcd35
 ## X-Part-Of: Auctioneer
 ## X-Category: Auction House
 ## X-Max-Interface: 80100

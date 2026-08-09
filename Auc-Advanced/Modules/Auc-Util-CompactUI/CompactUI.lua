@@ -1,4 +1,4 @@
-﻿--[[
+--[[
 	Auctioneer - Price Level Utility module
 	Version: 2.5.6756 (SwimmingSeadragon)
 	Revision: $Id: CompactUI.lua 6756 2022-01-25 11:42:44Z none $
@@ -220,7 +220,7 @@ function private.HookAH()
 		button.IconButton:SetPoint("TOPLEFT", button, "TOPLEFT", 30, 0)
 		button.IconButton:SetWidth(16)
 		button.IconButton:SetHeight(19)
-		button.IconButton:SetNormalTexture("Interface\\Buttons\\UI-Quickslot2")
+		button.IconButton:ClearNormalTexture()
 		button.IconButton:SetScript("OnEnter", private.IconEnter)
 		button.IconButton:SetScript("OnLeave", private.IconLeave)
 		button.IconButton:SetScript("OnClick", private.IconClick)
@@ -578,19 +578,10 @@ end
 
 function private.IconEnter(this)
 	local button = this:GetParent()
-	button.Icon:ClearAllPoints()
-	button.Icon:SetPoint("RIGHT", this, "LEFT")
-	button.Icon:SetWidth(64)
-	button.Icon:SetHeight(64)
 	AuctionFrameItem_OnEnter(this, "list", button.id)
 end
 
 function private.IconLeave(this)
-	local button = this:GetParent()
-	button.Icon:ClearAllPoints()
-	button.Icon:SetPoint("TOPLEFT", this, "TOPLEFT")
-	button.Icon:SetWidth(16)
-	button.Icon:SetHeight(16)
 	GameTooltip:Hide()
 	if BattlePetTooltip then
 		BattlePetTooltip:Hide()

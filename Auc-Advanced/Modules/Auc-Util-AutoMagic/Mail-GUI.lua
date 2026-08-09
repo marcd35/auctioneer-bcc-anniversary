@@ -198,7 +198,7 @@ function lib.makeMailGUI()
 	local ScrollSheet = LibStub:GetLibrary("ScrollSheet")
 
 	function frame.slotclear()
-		frame.slot:SetNormalTexture("")
+		frame.slot:ClearNormalTexture()
 		frame.slot.help:SetText("Drop item into box")
 		frame.slot.workingItem = nil
 		frame.addButton:Disable()
@@ -208,8 +208,12 @@ function lib.makeMailGUI()
 	function frame.slotadd(itemID, add)
 		if not itemID then frame.slotclear() return end
 		local _, itemLink, _, _, _, _, _, _, _, itemTexture = GetItemInfo(itemID)
-		frame.slot:SetNormalTexture(itemTexture)
-		frame.slot.help:SetText(itemLink)
+		if itemTexture then
+			frame.slot:SetNormalTexture(itemTexture)
+		else
+			frame.slot:ClearNormalTexture()
+		end
+		frame.slot.help:SetText(itemLink or "")
 		frame.slot.workingItem = itemID
 		if add then
 			frame.addButton:Enable()

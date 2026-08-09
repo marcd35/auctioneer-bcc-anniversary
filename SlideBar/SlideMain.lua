@@ -971,12 +971,13 @@ function private.GUI()
 			if button and button.id and button.icon then
 				guibutton:Enable()
 				guibutton.name = button.id
-				guibutton:SetNormalTexture(button.icon:GetTexture())
-				local normtex = guibutton:GetNormalTexture()
-				if not normtex then
+				local iconTex = button.icon:GetTexture()
+				if iconTex then
+					guibutton:SetNormalTexture(iconTex)
+				else
 					guibutton:SetNormalTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-					normtex = guibutton:GetNormalTexture()
 				end
+				local normtex = guibutton:GetNormalTexture()
 				if SlideBarConfig[button.id..".hide"] then
 					if normtex then normtex:SetDesaturated(true) end
 					guibutton.tex:Show()
@@ -986,7 +987,7 @@ function private.GUI()
 				end
 			elseif guibutton.name then
 				guibutton.name = nil
-				guibutton:SetNormalTexture()
+				guibutton:ClearNormalTexture()
 				guibutton:Disable()
 				guibutton.tex:Hide()
 			end

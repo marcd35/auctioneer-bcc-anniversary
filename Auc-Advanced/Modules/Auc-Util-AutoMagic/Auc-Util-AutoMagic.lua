@@ -341,8 +341,12 @@ function lib.setWorkingItem(link)
 	local linkType, id, _, _, _, _ = decode(link)
 	if linkType ~= "item" then return end
 	local name, _, _, _, _, _, _, _, _, texture = GetItemInfo(link)
-	autosellframe.workingname:SetText(name)
-	autosellframe.slot:SetNormalTexture(texture)
+	autosellframe.workingname:SetText(name or "")
+	if texture then
+		autosellframe.slot:SetNormalTexture(texture)
+	else
+		autosellframe.slot:ClearNormalTexture()
+	end
 	myworkingtable = {}
 	for k, n in pairs(myworkingtable) do
 		myworkingtable[k] = nil
@@ -374,7 +378,7 @@ end
 
 function autosellframe.ClearIcon()
 	autosellframe.workingname:SetText("Item Name")
-	autosellframe.slot:SetNormalTexture("")
+	autosellframe.slot:ClearNormalTexture()
 end
 
 

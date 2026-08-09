@@ -710,7 +710,11 @@ function private.LoadItemLink(itemLink, size)
 		frame.CurItem.link = itemLink
 		frame.CurItem.name = name
 		frame.icon.itemLink = itemLink
-		frame.icon:SetNormalTexture(texture)
+		if texture then
+			frame.icon:SetNormalTexture(texture)
+		else
+			frame.icon:ClearNormalTexture()
+		end
 
 		local _, total, unpostable, _, _, reason = CountAvailableItems(sig)
 		local itemCount = total - unpostable
