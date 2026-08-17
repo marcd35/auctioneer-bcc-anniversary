@@ -11,6 +11,7 @@
 			"Auc-Util-AskPrice",
 			"Auc-Util-AutoMagic",
 			"Auc-Util-CompactUI",
+			"Auc-Util-DataPruner",
 			"Auc-Util-EasyBuyout",
 			"Auc-Util-Example",
 			"Auc-Util-ItemSuggest",
@@ -36,6 +37,7 @@
 	<Include file="Auc-Util-AskPrice\Embed.xml"/>
 	<Include file="Auc-Util-AutoMagic\Embed.xml"/>
 	<Include file="Auc-Util-CompactUI\Embed.xml"/>
+	<Include file="Auc-Util-DataPruner\Embed.xml"/>
 	<Include file="Auc-Util-EasyBuyout\Embed.xml"/>
 	<Include file="Auc-Util-Example\Embed.xml"/>
 	<Include file="Auc-Util-ItemSuggest\Embed.xml"/>

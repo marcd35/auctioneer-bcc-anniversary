@@ -29,6 +29,7 @@ This fork specifically addresses bugs introduced with the World of Warcraft Burn
 - **Buy/Bid Delta Filter**: Added a new filter and column (`Δ Pct`) to the SearchUI results grid. This allows users to view the percentage difference between the buyout price and current bid price, and optionally filter out auctions based on a minimum and/or maximum delta threshold. This feature is particularly useful for identifying arbitrage opportunities where a low bid on a high-value buyout item can yield significant profit.
 - **SearchUI TimeLeft Filter Refactor**: Improved the TimeLeft filter to allow more granular control. Replaced the "Filter if more than" dropdown with two separate dropdowns: a qualifier (Less than, Less than and equal to, Equal to, Greater than, Greater than and equal to) and a time option (30min, 2hr, 12hr, 48hr).
 - **Vendor Max Buyout Price**: Added new "Max Buyout Price" input box to Vendor tab which filters out auctions exceeding the input price.
+- **Data Maintenance and DataPruner**: Reorganized Auctioneer's settings with a dedicated **Data Maintenance** parent category containing the existing ScanData controls and the new DataPruner utility. DataPruner can preview Stat-Simple price outliers in a non-destructive dry run, report results in chat, and prune matching historical records after confirmation. It also supports targeted item pruning or complete history removal through an item drop slot or Alt-click workflow. Back up your SavedVariables before permanently pruning or wiping data.
 
 ---
 

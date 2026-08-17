@@ -1,0 +1,14 @@
+## Title: Auc:Util:DataPruner
+## Interface: 20504
+## Notes: Adds retroactive database pruning capabilities and threshold cutoff settings to clean historical outlier price data.
+## Dependancies: Auc-Advanced
+##
+## Version: 2.5.6775 (Crusade)
+## Revision: $Id: Auc-Util-DataPruner.toc 6775 2026-08-09 18:20:00Z none $
+## Author: Norganna's AddOns
+## X-Part-Of: Auctioneer
+## X-Category: Auction House
+## X-Max-Interface: 80100
+## X-URL: http://auctioneeraddon.com/
+##
+Embed.xml

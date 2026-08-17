@@ -632,8 +632,9 @@ function private._MakeGuiConfig() -- Name mangled to block gui creation at first
 		_TRANS("ADV_Help_UnresolvedAuctionsTolerance")) --Auctioneer is sometimes unable to resolve a number of auctions during a scan, causing the scan to be incomplete. Unresolved Auctions Tolerance allows Auctioneer to still mark as scan as complete if the number of these errors is very small. May be useful when the server is unstable, particularly after major patches.
 
 
-	-- Data Maintenance tab under development - do not localize yet
-	id = gui:AddTab("Data Maintenance")
+	-- Data Maintenance category
+	gui:AddCat("Data Maintenance")
+	id = gui:AddTab("ScanData", "Data Maintenance")
 	gui:AddControl(id, "Header", 0, "Database Options and Maintenance")
 
 	gui:AddControl(id, "Subhead", 0, "ScanData Settings")
@@ -655,7 +656,7 @@ function private._MakeGuiConfig() -- Name mangled to block gui creation at first
 
 
 	--Tooltip category for all modules to add tooltip related settings too
-	id = gui:AddTab("Tooltip")
+	id = gui:AddTab("Tooltip", "Core Options")
 	gui:MakeScrollable(id)
 	lib.Gui.tooltipID = id
 	gui:AddHelp(id, "what is the tooltip tab",
